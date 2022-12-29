@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+
+let devices = require('./test-devices')
+
+require('./')({
+  debug: () => {},
+  handleMessage: (id, x) => {
+    console.log(`handleMessage:${JSON.stringify(x)}`)
+  }
+}).start(devices)

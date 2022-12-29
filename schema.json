@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "properties": {
+    "devices": {
+      "type": "array",
+      "title": "Victron Devices",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mac",
+          "key"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "SignalK ID",
+            "default": "0"
+          },
+          "mac": {
+            "type": "string",
+            "title": "MAC Address",
+            "default": "00:00:00:00:00:00"
+          },
+          "key": {
+            "type": "string",
+            "title": "Advertisement Key",
+            "default": "00000000000000000000000000000000"
+          }
+        }
+      }
+    }
+  }
+}
