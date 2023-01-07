@@ -7,8 +7,10 @@ import logging
 import sys
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import Device, detect_device_type, BatteryMonitor
-from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
+from victron_ble.devices import (
+    detect_device_type, BatteryMonitor, Device, SolarCharger)
+from victron_ble.exceptions import (
+    AdvertisementKeyMissingError, UnknownDeviceError)
 from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
@@ -47,7 +49,10 @@ class SignalKScanner(Scanner):
         id_ = self._devices[bl_device.address.lower()].id
         if isinstance(device, BatteryMonitor):
             self.log_battery(bl_device, data, id_)
-        logger.debug("Unknown device", device)
+        elif isinstance(device, SolarCharger):
+            self.log_solar_charger(bl_device, data, id_)
+        else:
+            logger.debug("Unknown device", device)
 
     def log_battery(self, bl_device: BLEDevice, data: BatteryMonitor, id_: str):
         delta = {
@@ -75,6 +80,37 @@ class SignalKScanner(Scanner):
                         {
                             "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
                             "value": data.get_remaining_mins() * 60,
+                        },
+                    ],
+                },
+            ],
+        }
+        logger.info(delta)
+        print(json.dumps(delta))
+        sys.stdout.flush()
+
+    def log_solar_charger(self, bl_device: BLEDevice, data: SolarCharger, id_: str):
+        delta = {
+            "updates": [
+                {
+                    "source": {
+                        "label": "Victron",
+                        "type": "Bluetooth",
+                        "src": bl_device.address,
+                    },
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "values": [
+                        {
+                            "path": f"electrical.solar.{id_}.voltage",
+                            "value": data.get_battery_voltage(),
+                        },
+                        {
+                            "path": f"electrical.solar.{id_}.current",
+                            "value": data.get_battery_charging_current(),
+                        },
+                        {
+                            "path": f"electrical.solar.{id_}.chargingMode",
+                            "value": data.get_charge_state().name.lower(),
                         },
                     ],
                 },
