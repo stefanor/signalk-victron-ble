@@ -1,1 +1,1 @@
-victron_ble
+victron_ble>=0.4.0

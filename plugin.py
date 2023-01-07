@@ -8,7 +8,8 @@ import sys
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import Device, detect_device_type, BatteryMonitor
-from victron_ble.scanner import BaseScanner
+from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
+from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
 
@@ -20,31 +21,16 @@ class ConfiguredDevice:
     advertisement_key: str
 
 
-class SignalKScanner(BaseScanner):
+class SignalKScanner(Scanner):
     def __init__(self, devices):
         super().__init__()
-        self._known_devices: dict[str, Device] = {}
         self._devices: dict[str:ConfiguredDevice] = devices
 
-    async def start(self):
-        logger.info("Starting")
-        await super().start()
-        logger.info("Started")
-
-    def get_device(self, device, data):
-        address = device.address.lower()
-        if address not in self._known_devices:
-            advertisement_key = self.load_key(address)
-
-            device_klass = detect_device_type(data)
-            if not device_klass:
-                raise KeyError(f"Could not identify device type for {device}")
-
-            self._known_devices[address] = device_klass(advertisement_key)
-        return self._known_devices[address]
-
     def load_key(self, address):
-        return self._devices[address].advertisement_key
+        try:
+            return self._devices[address].advertisement_key
+        except KeyError:
+            raise AdvertisementKeyMissingError(f"No key available for {address}")
 
     def callback(self, bl_device: BLEDevice, raw_data: bytes):
         logger.debug(
@@ -52,8 +38,10 @@ class SignalKScanner(BaseScanner):
         )
         try:
             device = self.get_device(bl_device, raw_data)
-        except KeyError as e:
-            logger.info("Error", e)
+        except AdvertisementKeyMissingError:
+            return
+        except UnknownDeviceError as e:
+            logger.error(e)
             return
         data = device.parse(raw_data)
         id_ = self._devices[bl_device.address.lower()].id
