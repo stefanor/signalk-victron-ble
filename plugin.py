@@ -5,6 +5,7 @@ import dataclasses
 import json
 import logging
 import sys
+from typing import Optional
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import BatteryMonitor, SolarCharger
@@ -19,6 +20,7 @@ class ConfiguredDevice:
     id: str
     mac: str
     advertisement_key: str
+    secondary_battery: Optional[str]
 
 
 class SignalKScanner(Scanner):
@@ -44,15 +46,50 @@ class SignalKScanner(Scanner):
             logger.error(e)
             return
         data = device.parse(raw_data)
-        id_ = self._devices[bl_device.address.lower()].id
+        configured_device = self._devices[bl_device.address.lower()]
+        id_ = configured_device.id
         if isinstance(device, BatteryMonitor):
-            self.log_battery(bl_device, data, id_)
+            self.log_battery(bl_device, configured_device, data, id_)
         elif isinstance(device, SolarCharger):
-            self.log_solar_charger(bl_device, data, id_)
+            self.log_solar_charger(bl_device, configured_device, data, id_)
         else:
             logger.debug("Unknown device", device)
 
-    def log_battery(self, bl_device: BLEDevice, data: BatteryMonitor, id_: str):
+    def log_battery(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: BatteryMonitor,
+        id_: str,
+    ):
+        values = [
+            {
+                "path": f"electrical.batteries.{id_}.voltage",
+                "value": data.get_voltage(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.current",
+                "value": data.get_current(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
+                "value": data.get_soc(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
+                "value": data.get_remaining_mins() * 60,
+            },
+        ]
+
+        starter_voltage = data.get_starter_voltage()
+        if cfg_device.secondary_battery and starter_voltage:
+            values.append(
+                {
+                    "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
+                    "value": starter_voltage,
+                }
+            )
+
         delta = {
             "updates": [
                 {
@@ -62,24 +99,7 @@ class SignalKScanner(Scanner):
                         "src": bl_device.address,
                     },
                     "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": [
-                        {
-                            "path": f"electrical.batteries.{id_}.voltage",
-                            "value": data.get_voltage(),
-                        },
-                        {
-                            "path": f"electrical.batteries.{id_}.current",
-                            "value": data.get_current(),
-                        },
-                        {
-                            "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                            "value": data.get_soc(),
-                        },
-                        {
-                            "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
-                            "value": data.get_remaining_mins() * 60,
-                        },
-                    ],
+                    "values": values,
                 },
             ],
         }
@@ -87,7 +107,13 @@ class SignalKScanner(Scanner):
         print(json.dumps(delta))
         sys.stdout.flush()
 
-    def log_solar_charger(self, bl_device: BLEDevice, data: SolarCharger, id_: str):
+    def log_solar_charger(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: SolarCharger,
+        id_: str,
+    ):
         delta = {
             "updates": [
                 {
@@ -145,6 +171,7 @@ def main():
             id=device["id"],
             mac=device["mac"],
             advertisement_key=device["key"],
+            secondary_battery=device.get("secondary_battery"),
         )
 
     asyncio.run(monitor(devices))
