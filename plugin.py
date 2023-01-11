@@ -7,10 +7,8 @@ import logging
 import sys
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import (
-    detect_device_type, BatteryMonitor, Device, SolarCharger)
-from victron_ble.exceptions import (
-    AdvertisementKeyMissingError, UnknownDeviceError)
+from victron_ble.devices import BatteryMonitor, SolarCharger
+from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
