@@ -7,7 +7,10 @@ This is built on top of the
 [victron_ble](https://github.com/keshavdv/victron-ble) Python library,
 by Keshav Varma.
 
-Currently supported: Battery Monitors.
+Currently supported:
+
+* BMV 712 Battery Monitors.
+* BlueSolar MPPT chargers (but untested in production).
 
 ## Development
 
