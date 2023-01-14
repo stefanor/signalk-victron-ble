@@ -12,7 +12,12 @@
   ],
   "author": "Stefano Rivera <stefano@rivera.za.net> (https://stefanorivera.com)",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "github:stefanor/signalk-victron-ble"
+  },
   "scripts": {
     "preinstall": "python3 -m venv ve && ve/bin/python -m pip install wheel && ve/bin/python -m pip install -r requirements.txt"
   }
+}
 }
