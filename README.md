@@ -17,7 +17,7 @@ Currently supported:
 - Before installing, you need to have `python3` installed, with a
   working `venv` module.
   - On Debian/Ubuntu/Raspbian, this means installing the `python3-venv` package.
-- Install the module through SignalK / npm.
+- Install this plugin through SignalK / npm.
 - Use the native Victron app to obtain advertisement keys for
   communicating with your Victron devices.
   There are instructions for this
