@@ -12,6 +12,20 @@ Currently supported:
 * BMV 712 Battery Monitors.
 * BlueSolar MPPT chargers (but untested in production).
 
+## Installation
+
+- Before installing, you need to have `python3` installed, with a
+  working `venv` module.
+  - On Debian/Ubuntu/Raspbian, this means installing the `python3-venv` package.
+- Install the module through SignalK / npm.
+- Use the native Victron app to obtain advertisement keys for
+  communicating with your Victron devices.
+  There are instructions for this
+  [here](https://github.com/keshavdv/victron-ble#usage).
+- Enter the MAC address and advertisment key for each device in the
+  plugin settings in SignalK.
+- Restart SignalK.
+
 ## Development
 
 - clone the plugin from Github
