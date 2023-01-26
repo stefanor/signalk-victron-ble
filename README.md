@@ -22,8 +22,12 @@ Currently supported:
   communicating with your Victron devices.
   There are instructions for this
   [here](https://github.com/keshavdv/victron-ble#usage).
-- Enter the MAC address and advertisment key for each device in the
-  plugin settings in SignalK.
+- Configure each Victron device in the SignalK plugin settings:
+  - Decide on a name for the battery/device/bus, e.g. `house`.
+  - Provide the Bluetooth MAC address of the device.
+  - Provide the advertisement key for the device.
+  - If appropriate, provide a `secondary battery` name. e.g. `start` for
+    a BMV that is connected to a house bank and start bank.
 - Restart SignalK.
 
 ## Development
