@@ -76,6 +76,10 @@ class SignalKScanner(Scanner):
                 "value": data.get_soc(),
             },
             {
+                "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
+                "value": data.get_consumed_ah() * 3600,
+            },
+            {
                 "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
                 "value": data.get_remaining_mins() * 60,
             },
