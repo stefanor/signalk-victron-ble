@@ -20,4 +20,3 @@
     "preinstall": "python3 -m venv ve && ve/bin/python -m pip install wheel && ve/bin/python -m pip install -r requirements.txt"
   }
 }
-}
