@@ -8,7 +8,7 @@ import sys
 from typing import Optional
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import BatteryMonitor, SolarCharger
+from victron_ble.devices import AuxMode, BatteryMonitor, SolarCharger
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -85,12 +85,19 @@ class SignalKScanner(Scanner):
             },
         ]
 
-        starter_voltage = data.get_starter_voltage()
-        if cfg_device.secondary_battery and starter_voltage:
+        if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
+            if cfg_device.secondary_battery :
+                values.append(
+                    {
+                        "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
+                        "value": data.get_starter_voltage(),
+                    }
+                )
+        elif data.get_aux_mode() == TEMPERATURE:
             values.append(
                 {
-                    "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
-                    "value": starter_voltage,
+                    "path": f"electrical.batteries.{cfg_device.secondary_battery}.temperature",
+                    "value": data.get_temperature() + 273.15,
                 }
             )
 
