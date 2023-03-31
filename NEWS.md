@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.3
+
+* Bug fixes for 0.0.2.
+
 ## 0.0.2
 
 * Improve documentation
