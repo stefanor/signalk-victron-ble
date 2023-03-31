@@ -96,7 +96,7 @@ class SignalKScanner(Scanner):
         elif data.get_aux_mode() == AuxMode.TEMPERATURE:
             values.append(
                 {
-                    "path": f"electrical.batteries.{cfg_device.secondary_battery}.temperature",
+                    "path": f"electrical.batteries.{id_}.temperature",
                     "value": data.get_temperature() + 273.15,
                 }
             )
