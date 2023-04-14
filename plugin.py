@@ -73,7 +73,7 @@ class SignalKScanner(Scanner):
             },
             {
                 "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                "value": data.get_soc(),
+                "value": data.get_soc() / 100,
             },
             {
                 "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
