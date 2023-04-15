@@ -8,7 +8,7 @@ import sys
 from typing import Optional
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import AuxMode BatteryMonitor, SolarCharger, DcDcConverter
+from victron_ble.devices import AuxMode, BatteryMonitor, SolarCharger, DcDcConverter
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -51,6 +51,7 @@ class SignalKScanner(Scanner):
         transformers = {
             BatteryMonitor: self.transform_battery_data,
             SolarCharger: self.transform_solar_charger_data,
+            DcDcConverter: self.transform_dcdc_converter_data,
         }
         for device_type, transformer in transformers.items():
             if isinstance(device, device_type):
