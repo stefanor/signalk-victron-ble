@@ -48,14 +48,21 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
-        if isinstance(device, BatteryMonitor):
-            self.log_battery(bl_device, configured_device, data, id_)
-        elif isinstance(device, SolarCharger):
-            self.log_solar_charger(bl_device, configured_device, data, id_)
+        transformers = {
+            BatteryMonitor: self.transform_battery_data,
+            SolarCharger: self.transform_solar_charger_data,
+        }
+        for device_type, transformer in transformers.items():
+            if isinstance(device, device_type):
+                delta = transformer(bl_device, configured_device, data, id_)
+                logger.info(delta)
+                print(json.dumps(delta))
+                sys.stdout.flush()
+                return
         else:
             logger.debug("Unknown device", device)
 
-    def log_battery(
+    def transform_battery_data(
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
@@ -101,7 +108,7 @@ class SignalKScanner(Scanner):
                 }
             )
 
-        delta = {
+        return {
             "updates": [
                 {
                     "source": {
@@ -114,18 +121,15 @@ class SignalKScanner(Scanner):
                 },
             ],
         }
-        logger.info(delta)
-        print(json.dumps(delta))
-        sys.stdout.flush()
 
-    def log_solar_charger(
+    def transform_solar_charger_data(
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
         data: SolarCharger,
         id_: str,
     ):
-        delta = {
+        return {
             "updates": [
                 {
                     "source": {
@@ -163,9 +167,6 @@ class SignalKScanner(Scanner):
                 },
             ],
         }
-        logger.info(delta)
-        print(json.dumps(delta))
-        sys.stdout.flush()
 
 
 async def monitor(devices):
