@@ -8,7 +8,7 @@ import sys
 from typing import Optional
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import BatteryMonitor, SolarCharger, DcDcConverter
+from victron_ble.devices import AuxMode BatteryMonitor, SolarCharger, DcDcConverter
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -48,16 +48,21 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
-        if isinstance(device, BatteryMonitor):
-            self.log_battery(bl_device, configured_device, data, id_)
-        elif isinstance(device, SolarCharger):
-            self.log_solar_charger(bl_device, configured_device, data, id_)
-        elif isinstance(device, DcDcConverter):
-            self.log_dcdc_converter(bl_device, configured_device, data, id_)
+        transformers = {
+            BatteryMonitor: self.transform_battery_data,
+            SolarCharger: self.transform_solar_charger_data,
+        }
+        for device_type, transformer in transformers.items():
+            if isinstance(device, device_type):
+                delta = transformer(bl_device, configured_device, data, id_)
+                logger.info(delta)
+                print(json.dumps(delta))
+                sys.stdout.flush()
+                return
         else:
             logger.debug("Unknown device", device)
 
-    def log_battery(
+    def transform_battery_data(
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
@@ -75,7 +80,11 @@ class SignalKScanner(Scanner):
             },
             {
                 "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                "value": data.get_soc(),
+                "value": data.get_soc() / 100,
+            },
+            {
+                "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
+                "value": data.get_consumed_ah() * 3600,
             },
             {
                 "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
@@ -83,16 +92,23 @@ class SignalKScanner(Scanner):
             },
         ]
 
-        starter_voltage = data.get_starter_voltage()
-        if cfg_device.secondary_battery and starter_voltage:
+        if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
+            if cfg_device.secondary_battery :
+                values.append(
+                    {
+                        "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
+                        "value": data.get_starter_voltage(),
+                    }
+                )
+        elif data.get_aux_mode() == AuxMode.TEMPERATURE:
             values.append(
                 {
-                    "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
-                    "value": starter_voltage,
+                    "path": f"electrical.batteries.{id_}.temperature",
+                    "value": data.get_temperature() + 273.15,
                 }
             )
 
-        delta = {
+        return {
             "updates": [
                 {
                     "source": {
@@ -105,18 +121,15 @@ class SignalKScanner(Scanner):
                 },
             ],
         }
-        logger.info(delta)
-        print(json.dumps(delta))
-        sys.stdout.flush()
 
-    def log_solar_charger(
+    def transform_solar_charger_data(
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
         data: SolarCharger,
         id_: str,
     ):
-        delta = {
+        return {
             "updates": [
                 {
                     "source": {
@@ -138,22 +151,31 @@ class SignalKScanner(Scanner):
                             "path": f"electrical.solar.{id_}.chargingMode",
                             "value": data.get_charge_state().name.lower(),
                         },
+                        {
+                            "path": f"electrical.solar.{id_}.panelPower",
+                            "value": data.get_solar_power(),
+                        },
+                        {
+                            "path": f"electrical.solar.{id_}.loadCurrent",
+                            "value": data.get_external_device_load(),
+                        },
+                        {
+                            "path": f"electrical.solar.{id_}.yieldToday",
+                            "value": data.get_yield_today(),
+                        },
                     ],
                 },
             ],
         }
-        logger.info(delta)
-        print(json.dumps(delta))
-        sys.stdout.flush()
 
-    def log_dcdc_converter(
+    def transform_dcdc_converter_data(
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
         data: DcDcConverter,
         id_: str,
     ):
-        delta = {
+        return = {
             "updates": [
                 {
                     "source": {
@@ -187,9 +209,6 @@ class SignalKScanner(Scanner):
                 },
             ],
         }
-        logger.info(delta)
-        print(json.dumps(delta))
-        sys.stdout.flush()
 
 
 async def monitor(devices):
