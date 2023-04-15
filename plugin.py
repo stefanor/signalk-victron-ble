@@ -203,7 +203,7 @@ class SignalKScanner(Scanner):
                             "value": data.get_output_voltage(),
                         },
                         {
-                            "path": f"electrical.converters.{id_}.chargingMode.offReason",
+                            "path": f"electrical.converters.{id_}.chargerOffReason",
                             "value": data.get_off_reason().name.lower(),
                         },
                     ],
