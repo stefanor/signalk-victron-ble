@@ -155,6 +155,10 @@ class SignalKScanner(Scanner):
                             "path": f"electrical.solar.{id_}.loadCurrent",
                             "value": data.get_external_device_load(),
                         },
+                        {
+                            "path": f"electrical.solar.{id_}.yieldToday",
+                            "value": data.get_yield_today(),
+                        },
                     ],
                 },
             ],
