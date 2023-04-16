@@ -79,6 +79,10 @@ class SignalKScanner(Scanner):
                 "value": data.get_current(),
             },
             {
+                "path": f"electrical.batteries.{id_}.power",
+                "value": data.get_voltage() * data.get_current(),
+            },
+            {
                 "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
                 "value": data.get_soc() / 100,
             },
