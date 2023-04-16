@@ -8,7 +8,7 @@ import sys
 from typing import Optional
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import AuxMode, BatteryMonitor, SolarCharger
+from victron_ble.devices import AuxMode, BatteryMonitor, SolarCharger, DcDcConverter
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -51,6 +51,7 @@ class SignalKScanner(Scanner):
         transformers = {
             BatteryMonitor: self.transform_battery_data,
             SolarCharger: self.transform_solar_charger_data,
+            DcDcConverter: self.transform_dcdc_converter_data,
         }
         for device_type, transformer in transformers.items():
             if isinstance(device, device_type):
@@ -166,6 +167,48 @@ class SignalKScanner(Scanner):
                         {
                             "path": f"electrical.solar.{id_}.yieldToday",
                             "value": data.get_yield_today(),
+                        },
+                    ],
+                },
+            ],
+        }
+
+    def transform_dcdc_converter_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: DcDcConverter,
+        id_: str,
+    ):
+        return {
+            "updates": [
+                {
+                    "source": {
+                        "label": "Victron",
+                        "type": "Bluetooth",
+                        "src": bl_device.address,
+                    },
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "values": [
+                        {
+                            "path": f"electrical.converters.{id_}.chargingMode",
+                            "value": data.get_charge_state().name.lower(),
+                        },
+                        {
+                            "path": f"electrical.converters.{id_}.chargerError",
+                            "value": data.get_charger_error().name.lower(),
+                        },
+                        {
+                            "path": f"electrical.converters.{id_}.input.voltage",
+                            "value": data.get_input_voltage(),
+                        },
+                        {
+                            "path": f"electrical.converters.{id_}.output.voltage",
+                            "value": data.get_output_voltage(),
+                        },
+                        {
+                            "path": f"electrical.converters.{id_}.chargerOffReason",
+                            "value": data.get_off_reason().name.lower(),
                         },
                     ],
                 },
