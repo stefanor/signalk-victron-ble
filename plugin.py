@@ -176,7 +176,7 @@ class SignalKScanner(Scanner):
         data: DcDcConverter,
         id_: str,
     ):
-        return = {
+        return {
             "updates": [
                 {
                     "source": {
