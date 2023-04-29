@@ -14,7 +14,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "SignalK ID",
+            "title": "Device ID in SignalK",
             "default": "0"
           },
           "mac": {
@@ -29,7 +29,7 @@
           },
           "secondary_battery": {
             "type": "string",
-            "title": "Secondary Battery",
+            "title": "Secondary Battery Device ID (if relevant)",
             "default": "starter"
           }
         }

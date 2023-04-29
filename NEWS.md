@@ -1,5 +1,10 @@
 # Changelog
 
+## UNRELEASED
+
+* Made the descriptions of the ID fields in settings easier to
+  understand.
+
 ## 0.0.4
 
 * Breaking Change: Report `electrical.batteries.*.stateOfCharge` as a
