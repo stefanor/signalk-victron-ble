@@ -10,6 +10,7 @@ from typing import Optional
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import (
     AuxMode,
+    BatterySenseData,
     BatteryMonitorData,
     SolarChargerData,
     DcDcConverterData,
@@ -67,6 +68,36 @@ class SignalKScanner(Scanner):
                 return
         else:
             logger.debug("Unknown device", device)
+
+    def transform_battery_sense_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: BatterySenseData,
+        id_: str,
+    ):
+        return {
+            "updates": [
+                {
+                    "source": {
+                        "label": "Victron",
+                        "type": "Bluetooth",
+                        "src": bl_device.address,
+                    },
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "values": [
+                        {
+                            "path": f"electrical.batteries.{id_}.voltage",
+                            "value": data.get_voltage(),
+                        },
+                        {
+                            "path": f"electrical.batteries.{id_}.temperature",
+                            "value": data.get_temperature() + 273.15,
+                        },
+                    ],
+                },
+            ],
+        }
 
     def transform_battery_data(
         self,
