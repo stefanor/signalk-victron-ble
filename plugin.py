@@ -8,7 +8,12 @@ import sys
 from typing import Optional
 
 from bleak.backends.device import BLEDevice
-from victron_ble.devices import AuxMode, BatteryMonitor, SolarCharger, DcDcConverter
+from victron_ble.devices import (
+    AuxMode,
+    BatteryMonitorData,
+    SolarChargerData,
+    DcDcConverterData,
+)
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -49,12 +54,12 @@ class SignalKScanner(Scanner):
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
         transformers = {
-            BatteryMonitor: self.transform_battery_data,
-            SolarCharger: self.transform_solar_charger_data,
-            DcDcConverter: self.transform_dcdc_converter_data,
+            BatteryMonitorData: self.transform_battery_data,
+            SolarChargerData: self.transform_solar_charger_data,
+            DcDcConverterData: self.transform_dcdc_converter_data,
         }
-        for device_type, transformer in transformers.items():
-            if isinstance(device, device_type):
+        for data_type, transformer in transformers.items():
+            if isinstance(data, data_type):
                 delta = transformer(bl_device, configured_device, data, id_)
                 logger.info(delta)
                 print(json.dumps(delta))
@@ -67,7 +72,7 @@ class SignalKScanner(Scanner):
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
-        data: BatteryMonitor,
+        data: BatteryMonitorData,
         id_: str,
     ):
         values = [
@@ -98,7 +103,7 @@ class SignalKScanner(Scanner):
         ]
 
         if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
-            if cfg_device.secondary_battery :
+            if cfg_device.secondary_battery:
                 values.append(
                     {
                         "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
@@ -131,7 +136,7 @@ class SignalKScanner(Scanner):
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
-        data: SolarCharger,
+        data: SolarChargerData,
         id_: str,
     ):
         return {
@@ -177,7 +182,7 @@ class SignalKScanner(Scanner):
         self,
         bl_device: BLEDevice,
         cfg_device: ConfiguredDevice,
-        data: DcDcConverter,
+        data: DcDcConverterData,
         id_: str,
     ):
         return {
