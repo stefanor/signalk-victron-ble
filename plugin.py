@@ -56,6 +56,7 @@ class SignalKScanner(Scanner):
         id_ = configured_device.id
         transformers = {
             BatteryMonitorData: self.transform_battery_data,
+            BatterySenseData: self.transform_battery_sense_data,
             SolarChargerData: self.transform_solar_charger_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
         }
