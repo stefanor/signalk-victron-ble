@@ -1,10 +1,13 @@
 # Changelog
 
+## 0.0.6
+
+* Add support for Battery Sense.
+
 ## 0.0.5
 
 * Made the descriptions of the ID fields in settings easier to
   understand.
-* Add support for Battery Sense.
 
 ## 0.0.4
 
