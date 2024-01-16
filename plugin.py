@@ -203,7 +203,7 @@ class SignalKScanner(Scanner):
                         },
                         {
                             "path": f"electrical.solar.{id_}.yieldToday",
-                            "value": data.get_yield_today(),
+                            "value": data.get_yield_today() * 3600,
                         },
                     ],
                 },
