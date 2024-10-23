@@ -5,14 +5,15 @@ import dataclasses
 import json
 import logging
 import sys
-from typing import Optional
+from typing import Any, Callable, Optional, TypeAlias
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import (
     AuxMode,
-    BatterySenseData,
     BatteryMonitorData,
+    BatterySenseData,
     DcDcConverterData,
+    DeviceData,
     OrionXSData,
     SolarChargerData,
 )
@@ -20,6 +21,8 @@ from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceEr
 from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
+
+SignalKDelta: TypeAlias = dict[str, list[dict[str, Any]]]
 
 
 @dataclasses.dataclass
@@ -31,17 +34,19 @@ class ConfiguredDevice:
 
 
 class SignalKScanner(Scanner):
-    def __init__(self, devices):
-        super().__init__()
-        self._devices: dict[str:ConfiguredDevice] = devices
+    _devices: dict[str, ConfiguredDevice]
 
-    def load_key(self, address):
+    def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
+        super().__init__()
+        self._devices = devices
+
+    def load_key(self, address: str) -> str:
         try:
             return self._devices[address].advertisement_key
         except KeyError:
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
-    def callback(self, bl_device: BLEDevice, raw_data: bytes):
+    def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
         logger.debug(
             f"Received data from {bl_device.address.lower()}: {raw_data.hex()}"
         )
@@ -55,7 +60,10 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
-        transformers = {
+        transformers: dict[
+            type[DeviceData],
+            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDelta],
+        ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
             SolarChargerData: self.transform_solar_charger_data,
@@ -78,7 +86,7 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: BatterySenseData,
         id_: str,
-    ):
+    ) -> SignalKDelta:
         return {
             "updates": [
                 {
@@ -108,7 +116,7 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: BatteryMonitorData,
         id_: str,
-    ):
+    ) -> SignalKDelta:
         values = [
             {
                 "path": f"electrical.batteries.{id_}.voltage",
@@ -145,12 +153,13 @@ class SignalKScanner(Scanner):
                     }
                 )
         elif data.get_aux_mode() == AuxMode.TEMPERATURE:
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.temperature",
-                    "value": data.get_temperature() + 273.15,
-                }
-            )
+            if temperature := data.get_temperature():
+                values.append(
+                    {
+                        "path": f"electrical.batteries.{id_}.temperature",
+                        "value": temperature + 273.15,
+                    }
+                )
 
         return {
             "updates": [
@@ -172,7 +181,33 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: DcDcConverterData,
         id_: str,
-    ):
+    ) -> SignalKDelta:
+        values = [
+            {
+                "path": f"electrical.converters.{id_}.chargingMode",
+                "value": data.get_charge_state().name.lower(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.chargerError",
+                "value": data.get_charger_error().name.lower(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.input.voltage",
+                "value": data.get_input_voltage(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.output.voltage",
+                "value": data.get_output_voltage(),
+            },
+        ]
+        if off_reason := data.get_off_reason().name:
+            values.append(
+                {
+                    "path": f"electrical.converters.{id_}.chargerOffReason",
+                    "value": off_reason.lower(),
+                }
+            )
+
         return {
             "updates": [
                 {
@@ -182,28 +217,7 @@ class SignalKScanner(Scanner):
                         "src": bl_device.address,
                     },
                     "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": [
-                        {
-                            "path": f"electrical.converters.{id_}.chargingMode",
-                            "value": data.get_charge_state().name.lower(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.chargerError",
-                            "value": data.get_charger_error().name.lower(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.input.voltage",
-                            "value": data.get_input_voltage(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.output.voltage",
-                            "value": data.get_output_voltage(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.chargerOffReason",
-                            "value": data.get_off_reason().name.lower(),
-                        },
-                    ],
+                    "values": values,
                 },
             ],
         }
@@ -214,7 +228,40 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: OrionXSData,
         id_: str,
-    ):
+    ) -> SignalKDelta:
+        values = [
+            {
+                "path": f"electrical.converters.{id_}.chargingMode",
+                "value": data.get_charge_state().name.lower(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.chargerError",
+                "value": data.get_charger_error().name.lower(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.input.voltage",
+                "value": data.get_input_voltage(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.input.current",
+                "value": data.get_input_current(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.output.voltage",
+                "value": data.get_output_voltage(),
+            },
+            {
+                "path": f"electrical.converters.{id_}.output.current",
+                "value": data.get_output_current(),
+            },
+        ]
+        if off_reason := data.get_off_reason().name:
+            values.append(
+                {
+                    "path": f"electrical.converters.{id_}.chargerOffReason",
+                    "value": off_reason.lower(),
+                }
+            )
         return {
             "updates": [
                 {
@@ -224,36 +271,7 @@ class SignalKScanner(Scanner):
                         "src": bl_device.address,
                     },
                     "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": [
-                        {
-                            "path": f"electrical.converters.{id_}.chargingMode",
-                            "value": data.get_charge_state().name.lower(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.chargerError",
-                            "value": data.get_charger_error().name.lower(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.input.voltage",
-                            "value": data.get_input_voltage(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.input.current",
-                            "value": data.get_input_current(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.output.voltage",
-                            "value": data.get_output_voltage(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.output.current",
-                            "value": data.get_output_current(),
-                        },
-                        {
-                            "path": f"electrical.converters.{id_}.chargerOffReason",
-                            "value": data.get_off_reason().name.lower(),
-                        },
-                    ],
+                    "values": values,
                 },
             ],
         }
@@ -264,7 +282,7 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: SolarChargerData,
         id_: str,
-    ):
+    ) -> SignalKDelta:
         return {
             "updates": [
                 {
@@ -305,13 +323,13 @@ class SignalKScanner(Scanner):
         }
 
 
-async def monitor(devices):
+async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     scanner = SignalKScanner(devices)
     await scanner.start()
     await asyncio.Event().wait()
 
 
-def main():
+def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument(
         "--verbose", "-v", action="store_true", help="Increase the verbosity"
@@ -325,7 +343,7 @@ def main():
     logging.debug("Waiting for config...")
     config = json.loads(input())
     logging.info("Configured: %s", json.dumps(config))
-    devices = {}
+    devices: dict[str, ConfiguredDevice] = {}
     for device in config["devices"]:
         devices[device["mac"].lower()] = ConfiguredDevice(
             id=device["id"],
