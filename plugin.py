@@ -5,7 +5,7 @@ import dataclasses
 import json
 import logging
 import sys
-from typing import Any, Callable, Optional, TypeAlias
+from typing import Any, Callable, TypeAlias
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import (
@@ -30,7 +30,7 @@ class ConfiguredDevice:
     id: str
     mac: str
     advertisement_key: str
-    secondary_battery: Optional[str]
+    secondary_battery: str | None
 
 
 class SignalKScanner(Scanner):
