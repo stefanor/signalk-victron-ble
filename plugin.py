@@ -12,9 +12,9 @@ from victron_ble.devices import (
     AuxMode,
     BatterySenseData,
     BatteryMonitorData,
-    SolarChargerData,
     DcDcConverterData,
     OrionXSData,
+    SolarChargerData,
 )
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
