@@ -138,11 +138,14 @@ class SignalKScanner(Scanner):
                 "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
                 "value": data.get_consumed_ah() * 3600,
             },
-            {
-                "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
-                "value": data.get_remaining_mins() * 60,
-            },
         ]
+        if remaining_mins := data.get_remaining_mins():
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
+                    "value": remaining_mins * 60,
+                }
+            )
 
         if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
             if cfg_device.secondary_battery:
