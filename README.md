@@ -13,6 +13,7 @@ Currently supported:
 * BlueSolar MPPT chargers (but untested in production).
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
+* Inverters (untested).
 
 ## Installation
 

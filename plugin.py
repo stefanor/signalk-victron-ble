@@ -14,6 +14,7 @@ from victron_ble.devices import (
     BatterySenseData,
     DcDcConverterData,
     DeviceData,
+    InverterData,
     OrionXSData,
     SolarChargerData,
 )
@@ -68,6 +69,7 @@ class SignalKScanner(Scanner):
             BatterySenseData: self.transform_battery_sense_data,
             SolarChargerData: self.transform_solar_charger_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
+            InverterData: self.transform_inverter_data,
             OrionXSData: self.transform_orion_xs_data,
         }
         for data_type, transformer in transformers.items():
@@ -210,6 +212,50 @@ class SignalKScanner(Scanner):
                     "value": off_reason.lower(),
                 }
             )
+
+        return {
+            "updates": [
+                {
+                    "source": {
+                        "label": "Victron",
+                        "type": "Bluetooth",
+                        "src": bl_device.address,
+                    },
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "values": values,
+                },
+            ],
+        }
+
+    def transform_inverter_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: InverterData,
+        id_: str,
+    ) -> SignalKDelta:
+        values = [
+            {
+                "path": f"electrical.inverters.{id_}.inverterMode",
+                "value": data.get_device_state().name.lower(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.dc.voltage",
+                "value": data.get_battery_voltage(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.ac.apparentPower",
+                "value": data.get_ac_apparent_power(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.ac.lineNeutralVoltage",
+                "value": data.get_ac_voltage(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.ac.current",
+                "value": data.get_ac_current(),
+            },
+        ]
 
         return {
             "updates": [
