@@ -12,8 +12,9 @@ from victron_ble.devices import (
     AuxMode,
     BatterySenseData,
     BatteryMonitorData,
-    SolarChargerData,
     DcDcConverterData,
+    OrionXSData,
+    SolarChargerData,
 )
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
@@ -57,8 +58,9 @@ class SignalKScanner(Scanner):
         transformers = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
-            SolarChargerData: self.transform_solar_charger_data,
+            OrionXSData: self.transform_dcdc_converter_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
+            SolarChargerData: self.transform_solar_charger_data,
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
