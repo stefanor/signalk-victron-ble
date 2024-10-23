@@ -10,11 +10,12 @@ by Keshav Varma.
 Currently supported:
 
 * BMV 712 Battery Monitors.
-* Smart Shunts.
+* Battery Sense.
 * BlueSolar MPPT chargers (but untested in production).
+* Inverters (untested).
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
-* Inverters (untested).
+* Smart Shunts.
 
 ## Installation
 
