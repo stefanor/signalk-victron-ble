@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0
+
+* Update to victron_ble 0.9.0
+* Add support for:
+  * Inverters (untested)
+  * Lynx Smart BMS
+  * MultiPlus inverters (with VE.Bus Bluetooth dongle, untested)
+  * Orion XS DC/DC chargers/converters
+  * Smart Lithum batteries
+* Change solar yield unit to correctly report Jules (old value * 3600).
+
 ## 0.0.6
 
 * Add support for Battery Sense.
