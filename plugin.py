@@ -19,6 +19,7 @@ from victron_ble.devices import (
     OrionXSData,
     SmartLithiumData,
     SolarChargerData,
+    VEBusData,
 )
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
@@ -76,6 +77,7 @@ class SignalKScanner(Scanner):
             OrionXSData: self.transform_orion_xs_data,
             SmartLithiumData: self.transform_smart_lithium_data,
             SolarChargerData: self.transform_solar_charger_data,
+            VEBusData: self.transform_ve_bus_data,
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
@@ -392,6 +394,40 @@ class SignalKScanner(Scanner):
                 "value": data.get_yield_today(),
             },
         ]
+
+    def transform_ve_bus_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: VEBusData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
+            {
+                "path": f"electrical.inverters.{id_}.inverterMode",
+                "value": data.get_device_state().name.lower(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.dc.voltage",
+                "value": data.get_battery_voltage(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.dc.current",
+                "value": data.get_battery_current(),
+            },
+            {
+                "path": f"electrical.inverters.{id_}.ac.apparentPower",
+                "value": data.get_ac_out_power(),
+            },
+        ]
+        if temperature := data.get_battery_temperature():
+            values.append(
+                {
+                    "path": f"electrical.inverters.{id_}.dc.temperature",
+                    "value": temperature + 273.15,
+                }
+            )
+        return values
 
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:

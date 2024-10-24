@@ -14,6 +14,7 @@ Currently supported:
 * BlueSolar MPPT chargers (but untested in production).
 * Inverters (untested).
 * Lynx Smart BMS.
+* MultiPlus inverters (with VE.Bus Bluetooth dongle, untested)
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
 * Smart Lithum batteries.
