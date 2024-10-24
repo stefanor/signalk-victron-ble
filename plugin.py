@@ -25,6 +25,7 @@ from victron_ble.scanner import Scanner
 logger = logging.getLogger("signalk-victron-ble")
 
 SignalKDelta: TypeAlias = dict[str, list[dict[str, Any]]]
+SignalKDeltaValues: TypeAlias = list[dict[str, int | float | str | None]]
 
 
 @dataclasses.dataclass
@@ -64,7 +65,7 @@ class SignalKScanner(Scanner):
         id_ = configured_device.id
         transformers: dict[
             type[DeviceData],
-            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDelta],
+            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDeltaValues],
         ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
@@ -76,7 +77,8 @@ class SignalKScanner(Scanner):
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
-                delta = transformer(bl_device, configured_device, data, id_)
+                values = transformer(bl_device, configured_device, data, id_)
+                delta = self.prepare_signalk_delta(bl_device, values)
                 logger.info(delta)
                 print(json.dumps(delta))
                 sys.stdout.flush()
@@ -84,12 +86,8 @@ class SignalKScanner(Scanner):
         else:
             logger.debug("Unknown device", device)
 
-    def transform_battery_sense_data(
-        self,
-        bl_device: BLEDevice,
-        cfg_device: ConfiguredDevice,
-        data: BatterySenseData,
-        id_: str,
+    def prepare_signalk_delta(
+        self, bl_device: BLEDevice, values: SignalKDeltaValues
     ) -> SignalKDelta:
         return {
             "updates": [
@@ -100,19 +98,28 @@ class SignalKScanner(Scanner):
                         "src": bl_device.address,
                     },
                     "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": [
-                        {
-                            "path": f"electrical.batteries.{id_}.voltage",
-                            "value": data.get_voltage(),
-                        },
-                        {
-                            "path": f"electrical.batteries.{id_}.temperature",
-                            "value": data.get_temperature() + 273.15,
-                        },
-                    ],
-                },
-            ],
+                    "values": values,
+                }
+            ]
         }
+
+    def transform_battery_sense_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: BatterySenseData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        return [
+            {
+                "path": f"electrical.batteries.{id_}.voltage",
+                "value": data.get_voltage(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.temperature",
+                "value": data.get_temperature() + 273.15,
+            },
+        ]
 
     def transform_battery_data(
         self,
@@ -120,8 +127,8 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: BatteryMonitorData,
         id_: str,
-    ) -> SignalKDelta:
-        values = [
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
             {
                 "path": f"electrical.batteries.{id_}.voltage",
                 "value": data.get_voltage(),
@@ -168,19 +175,7 @@ class SignalKScanner(Scanner):
                     }
                 )
 
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": values,
-                },
-            ],
-        }
+        return values
 
     def transform_dcdc_converter_data(
         self,
@@ -188,8 +183,8 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: DcDcConverterData,
         id_: str,
-    ) -> SignalKDelta:
-        values = [
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
             {
                 "path": f"electrical.converters.{id_}.chargingMode",
                 "value": data.get_charge_state().name.lower(),
@@ -214,20 +209,7 @@ class SignalKScanner(Scanner):
                     "value": off_reason.lower(),
                 }
             )
-
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": values,
-                },
-            ],
-        }
+        return values
 
     def transform_inverter_data(
         self,
@@ -235,8 +217,8 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: InverterData,
         id_: str,
-    ) -> SignalKDelta:
-        values = [
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
             {
                 "path": f"electrical.inverters.{id_}.inverterMode",
                 "value": data.get_device_state().name.lower(),
@@ -258,20 +240,7 @@ class SignalKScanner(Scanner):
                 "value": data.get_ac_current(),
             },
         ]
-
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": values,
-                },
-            ],
-        }
+        return values
 
     def transform_lynx_smart_bms_data(
         self,
@@ -279,8 +248,8 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: LynxSmartBMSData,
         id_: str,
-    ) -> SignalKDelta:
-        values = [
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
             {
                 "path": f"electrical.batteries.{id_}.voltage",
                 "value": data.get_voltage(),
@@ -302,15 +271,19 @@ class SignalKScanner(Scanner):
                 }
             )
         if soc := data.get_soc():
-            values.append({
-                "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                "value": soc / 100,
-            })
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
+                    "value": soc / 100,
+                }
+            )
         if consumed_ah := data.get_consumed_ah():
-            values.append({
-                "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
-                "value": consumed_ah * 3600,
-            })
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
+                    "value": consumed_ah * 3600,
+                }
+            )
         if remaining_mins := data.get_remaining_mins():
             values.append(
                 {
@@ -318,19 +291,7 @@ class SignalKScanner(Scanner):
                     "value": remaining_mins * 60,
                 }
             )
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": values,
-                },
-            ],
-        }
+        return values
 
     def transform_orion_xs_data(
         self,
@@ -338,8 +299,8 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: OrionXSData,
         id_: str,
-    ) -> SignalKDelta:
-        values = [
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
             {
                 "path": f"electrical.converters.{id_}.chargingMode",
                 "value": data.get_charge_state().name.lower(),
@@ -372,19 +333,7 @@ class SignalKScanner(Scanner):
                     "value": off_reason.lower(),
                 }
             )
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": values,
-                },
-            ],
-        }
+        return values
 
     def transform_solar_charger_data(
         self,
@@ -392,45 +341,33 @@ class SignalKScanner(Scanner):
         cfg_device: ConfiguredDevice,
         data: SolarChargerData,
         id_: str,
-    ) -> SignalKDelta:
-        return {
-            "updates": [
-                {
-                    "source": {
-                        "label": "Victron",
-                        "type": "Bluetooth",
-                        "src": bl_device.address,
-                    },
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                    "values": [
-                        {
-                            "path": f"electrical.solar.{id_}.voltage",
-                            "value": data.get_battery_voltage(),
-                        },
-                        {
-                            "path": f"electrical.solar.{id_}.current",
-                            "value": data.get_battery_charging_current(),
-                        },
-                        {
-                            "path": f"electrical.solar.{id_}.chargingMode",
-                            "value": data.get_charge_state().name.lower(),
-                        },
-                        {
-                            "path": f"electrical.solar.{id_}.panelPower",
-                            "value": data.get_solar_power(),
-                        },
-                        {
-                            "path": f"electrical.solar.{id_}.loadCurrent",
-                            "value": data.get_external_device_load(),
-                        },
-                        {
-                            "path": f"electrical.solar.{id_}.yieldToday",
-                            "value": data.get_yield_today(),
-                        },
-                    ],
-                },
-            ],
-        }
+    ) -> SignalKDeltaValues:
+        return [
+            {
+                "path": f"electrical.solar.{id_}.voltage",
+                "value": data.get_battery_voltage(),
+            },
+            {
+                "path": f"electrical.solar.{id_}.current",
+                "value": data.get_battery_charging_current(),
+            },
+            {
+                "path": f"electrical.solar.{id_}.chargingMode",
+                "value": data.get_charge_state().name.lower(),
+            },
+            {
+                "path": f"electrical.solar.{id_}.panelPower",
+                "value": data.get_solar_power(),
+            },
+            {
+                "path": f"electrical.solar.{id_}.loadCurrent",
+                "value": data.get_external_device_load(),
+            },
+            {
+                "path": f"electrical.solar.{id_}.yieldToday",
+                "value": data.get_yield_today(),
+            },
+        ]
 
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
