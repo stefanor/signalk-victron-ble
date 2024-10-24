@@ -17,6 +17,7 @@ from victron_ble.devices import (
     InverterData,
     LynxSmartBMSData,
     OrionXSData,
+    SmartLithiumData,
     SolarChargerData,
 )
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
@@ -73,6 +74,7 @@ class SignalKScanner(Scanner):
             InverterData: self.transform_inverter_data,
             LynxSmartBMSData: self.transform_lynx_smart_bms_data,
             OrionXSData: self.transform_orion_xs_data,
+            SmartLithiumData: self.transform_smart_lithium_data,
             SolarChargerData: self.transform_solar_charger_data,
         }
         for data_type, transformer in transformers.items():
@@ -331,6 +333,28 @@ class SignalKScanner(Scanner):
                 {
                     "path": f"electrical.converters.{id_}.chargerOffReason",
                     "value": off_reason.lower(),
+                }
+            )
+        return values
+
+    def transform_smart_lithium_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: SmartLithiumData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        values: SignalKDeltaValues = [
+            {
+                "path": f"electrical.batteries.{id_}.voltage",
+                "value": data.get_battery_voltage(),
+            },
+        ]
+        if temperature := data.get_battery_temperature():
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.temperature",
+                    "value": temperature + 273.15,
                 }
             )
         return values

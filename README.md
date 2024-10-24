@@ -16,6 +16,7 @@ Currently supported:
 * Lynx Smart BMS.
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
+* Smart Lithum batteries.
 * Smart Shunts.
 
 ## Installation
