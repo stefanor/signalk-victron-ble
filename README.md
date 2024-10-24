@@ -13,6 +13,7 @@ Currently supported:
 * Battery Sense.
 * BlueSolar MPPT chargers (but untested in production).
 * Inverters (untested).
+* Lynx Smart BMS.
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
 * Smart Shunts.

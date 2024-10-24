@@ -15,6 +15,7 @@ from victron_ble.devices import (
     DcDcConverterData,
     DeviceData,
     InverterData,
+    LynxSmartBMSData,
     OrionXSData,
     SolarChargerData,
 )
@@ -71,6 +72,7 @@ class SignalKScanner(Scanner):
             DcDcConverterData: self.transform_dcdc_converter_data,
             InverterData: self.transform_inverter_data,
             OrionXSData: self.transform_orion_xs_data,
+            LynxSmartBMSData: self.transform_lynx_smart_bms_data,
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
@@ -257,6 +259,65 @@ class SignalKScanner(Scanner):
             },
         ]
 
+        return {
+            "updates": [
+                {
+                    "source": {
+                        "label": "Victron",
+                        "type": "Bluetooth",
+                        "src": bl_device.address,
+                    },
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "values": values,
+                },
+            ],
+        }
+
+    def transform_lynx_smart_bms_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: LynxSmartBMSData,
+        id_: str,
+    ) -> SignalKDelta:
+        values = [
+            {
+                "path": f"electrical.batteries.{id_}.voltage",
+                "value": data.get_voltage(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.current",
+                "value": data.get_current(),
+            },
+            {
+                "path": f"electrical.batteries.{id_}.power",
+                "value": data.get_voltage() * data.get_current(),
+            },
+        ]
+        if temperature := data.get_battery_temperature():
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.temperature",
+                    "value": temperature + 273.15,
+                }
+            )
+        if soc := data.get_soc():
+            values.append({
+                "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
+                "value": soc / 100,
+            })
+        if consumed_ah := data.get_consumed_ah():
+            values.append({
+                "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
+                "value": consumed_ah * 3600,
+            })
+        if remaining_mins := data.get_remaining_mins():
+            values.append(
+                {
+                    "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
+                    "value": remaining_mins * 60,
+                }
+            )
         return {
             "updates": [
                 {
