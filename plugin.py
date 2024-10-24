@@ -69,11 +69,11 @@ class SignalKScanner(Scanner):
         ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
-            SolarChargerData: self.transform_solar_charger_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
             InverterData: self.transform_inverter_data,
-            OrionXSData: self.transform_orion_xs_data,
             LynxSmartBMSData: self.transform_lynx_smart_bms_data,
+            OrionXSData: self.transform_orion_xs_data,
+            SolarChargerData: self.transform_solar_charger_data,
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
