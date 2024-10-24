@@ -11,7 +11,7 @@ Currently supported:
 
 * BMV 712 Battery Monitors.
 * Battery Sense.
-* BlueSolar MPPT chargers (but untested in production).
+* BlueSolar MPPT chargers (with VE.Direct Bluetooth dongle)
 * Inverters (untested).
 * Lynx Smart BMS.
 * MultiPlus inverters (with VE.Bus Bluetooth dongle, untested)
@@ -19,6 +19,7 @@ Currently supported:
 * Orion XS DC/DC chargers/converters.
 * Smart Lithum batteries.
 * Smart Shunts.
+* Smart Solar MPPT chargers.
 
 ## Installation
 
