@@ -5,7 +5,7 @@ import dataclasses
 import json
 import logging
 import sys
-from typing import Any, Callable, TypeAlias
+from typing import Any, Callable, Union
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import (
@@ -26,8 +26,9 @@ from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
 
-SignalKDelta: TypeAlias = dict[str, list[dict[str, Any]]]
-SignalKDeltaValues: TypeAlias = list[dict[str, int | float | str | None]]
+# 3.9 compatible TypeAliases
+SignalKDelta = dict[str, list[dict[str, Any]]]
+SignalKDeltaValues = list[dict[str, Union[int, float, str, None]]]
 
 
 @dataclasses.dataclass
@@ -35,7 +36,7 @@ class ConfiguredDevice:
     id: str
     mac: str
     advertisement_key: str
-    secondary_battery: str | None
+    secondary_battery: Union[str, None]
 
 
 class SignalKScanner(Scanner):
