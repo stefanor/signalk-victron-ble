@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+* Fix a critical syntax error in 0.1.2
+
 ## 0.1.2
 
 * Restore the correct unit (J) for solar yield (#17)
