@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+* Restore the correct unit (J) for solar yield (#17)
+
 ## 0.1.1
 
 * Restore support for Python 3.9 (#16)
