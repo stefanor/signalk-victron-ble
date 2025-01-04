@@ -20,6 +20,7 @@ Currently supported:
 * Smart Lithum batteries.
 * Smart Shunts.
 * Smart Solar MPPT chargers.
+* Smart BatteryProtect
 
 ## Installation
 

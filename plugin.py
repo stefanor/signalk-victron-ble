@@ -20,6 +20,7 @@ from victron_ble.devices import (
     SmartLithiumData,
     SolarChargerData,
     VEBusData,
+    SmartBatteryProtectData,
 )
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
@@ -79,6 +80,7 @@ class SignalKScanner(Scanner):
             SmartLithiumData: self.transform_smart_lithium_data,
             SolarChargerData: self.transform_solar_charger_data,
             VEBusData: self.transform_ve_bus_data,
+            SmartBatteryProtectData: self.transform_smart_battery_protect_data,
         }
         for data_type, transformer in transformers.items():
             if isinstance(data, data_type):
@@ -430,6 +432,24 @@ class SignalKScanner(Scanner):
             )
         return values
 
+    def transform_smart_battery_protect_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: BatterySenseData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        return [
+            {
+                "path": f"electrical.switches.{id_}.voltage",
+                "value": data.get_output_voltage(),
+            },
+            {
+                "path": f"electrical.switches.{id_}.outputMode",
+                "value": data.get_device_state().name.lower(),
+            },
+        ]
+    
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     scanner = SignalKScanner(devices)
