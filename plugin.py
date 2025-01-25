@@ -70,8 +70,8 @@ class SignalKScanner(Scanner):
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
         transformers: dict[
-            type[T],
-            Callable[[BLEDevice, ConfiguredDevice, T, str], SignalKDeltaValues],
+            type[DeviceData],
+            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDeltaValues],
         ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
