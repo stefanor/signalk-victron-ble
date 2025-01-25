@@ -8,8 +8,6 @@ import sys
 from typing import Any, Callable, TypeVar, Union
 
 from bleak.backends.device import BLEDevice
-
-T = TypeVar('T', bound=DeviceData)
 from victron_ble.devices import (
     AuxMode,
     BatteryMonitorData,
@@ -22,7 +20,10 @@ from victron_ble.devices import (
     SmartLithiumData,
     SolarChargerData,
     VEBusData,
+    DeviceData,
 )
+
+T = TypeVar('T', bound=DeviceData)
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
