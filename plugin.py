@@ -432,9 +432,17 @@ class SignalKScanner(Scanner):
 
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
-    scanner = SignalKScanner(devices)
-    await scanner.start()
-    await asyncio.Event().wait()
+    while True:
+        try:
+            scanner = SignalKScanner(devices)
+            await scanner.start()
+            await asyncio.Event().wait()
+        except (Exception, asyncio.CancelledError) as e:
+            logger.error(f"Scanner failed: {e}", exc_info=True)
+            await asyncio.sleep(5)  # Wait before reconnect
+            continue
+        else:
+            break
 
 
 def main() -> None:

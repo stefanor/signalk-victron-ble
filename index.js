@@ -15,46 +15,67 @@ module.exports = function (app) {
       let args = ['plugin.py']
       child = spawn('ve/bin/python', args, { cwd: __dirname })
 
+      const cleanup = () => {
+          if (child) {
+              child.removeAllListeners()
+              child = undefined
+          }
+      }
+
       child.stdout.on('data', data => {
         app.debug(data.toString())
         try {
           data.toString().split(/\r?\n/).forEach(line => {
-            // console.log(JSON.stringify(line))
             if (line.length > 0) {
               app.handleMessage(undefined, JSON.parse(line))
+              app.handleMessage(pkgData.name, {
+                updates: [{
+                  values: [{
+                    path: "plugins.victronBLE.status",
+                    value: "active"
+                  }]
+                }]
+              })
             }
           })
         } catch (e) {
-          console.error(e.message)
+          console.error('Data processing error:', e.message)
         }
       })
 
       child.stderr.on('data', fromChild => {
-        console.error(fromChild.toString())
+        console.error('Plugin stderr:', fromChild.toString())
       })
 
       child.on('error', err => {
-        console.error(err)
+        console.error('Subprocess error:', err)
+        cleanup()
+        setTimeout(() => run_python_plugin(options), 2000)
       })
 
       child.on('close', code => {
+        app.handleMessage(pkgData.name, {
+          updates: [{
+            values: [{
+              path: "plugins.victronBLE.status",
+              value: "inactive"
+            }]
+          }]
+        })
+        cleanup()
         if (code !== 0) {
-          console.warn(`Plugin exited ${code}, restarting...`)
+          console.warn(`Plugin exited ${code}, restarting in 2s...`)
+          setTimeout(() => run_python_plugin(options), 2000)
         }
-        child = undefined
       })
 
       child.stdin.write(JSON.stringify(options))
       child.stdin.write('\n')
   };
   return {
-    start: async (options) => {
-      while (true) {
-        if (child === undefined) {
-          run_python_plugin(options);
-        }
-        await sleep(1000);
-      }
+    start: (options) => {
+      run_python_plugin(options)
+      return () => {} // Return dummy stop for compatibility
     },
     stop: () => {
       if (child) {
