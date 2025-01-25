@@ -5,9 +5,11 @@ import dataclasses
 import json
 import logging
 import sys
-from typing import Any, Callable, Union
+from typing import Any, Callable, TypeVar, Union
 
 from bleak.backends.device import BLEDevice
+
+T = TypeVar('T', bound=DeviceData)
 from victron_ble.devices import (
     AuxMode,
     BatteryMonitorData,
@@ -67,8 +69,8 @@ class SignalKScanner(Scanner):
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
         transformers: dict[
-            type[DeviceData],
-            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDeltaValues],
+            type[T],
+            Callable[[BLEDevice, ConfiguredDevice, T, str], SignalKDeltaValues],
         ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
