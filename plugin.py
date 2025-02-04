@@ -438,6 +438,7 @@ async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     while True:
         try:
             scanner = SignalKScanner(devices)
+            logger.debug("Attempting to connect to BLE devices")
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
@@ -471,6 +472,7 @@ def main() -> None:
             secondary_battery=device.get("secondary_battery"),
         )
 
+    logging.info("Starting Victron BLE plugin")
     asyncio.run(monitor(devices))
 
 
