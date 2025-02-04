@@ -20,7 +20,6 @@ from victron_ble.devices import (
     SmartLithiumData,
     SolarChargerData,
     VEBusData,
-    DeviceData,
 )
 
 T = TypeVar('T', bound=DeviceData)
