@@ -28,6 +28,15 @@ from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
 
+logger.debug(
+    f"victron plugin starting up"
+)
+
+logger.error(
+    f"victron plugin starting up"
+)
+
+
 # 3.9 compatible TypeAliases
 SignalKDelta = dict[str, list[dict[str, Any]]]
 SignalKDeltaValues = list[dict[str, Union[int, float, str, None]]]
@@ -55,7 +64,7 @@ class SignalKScanner(Scanner):
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
     def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
-        logger.debug(
+        logger.error(
             f"Received data from {bl_device.address.lower()}: {raw_data.hex()}"
         )
         try:
@@ -91,7 +100,7 @@ class SignalKScanner(Scanner):
                 sys.stdout.flush()
                 return
         else:
-            logger.debug("Unknown device", device)
+            logger.error("Unknown device", device)
 
     def prepare_signalk_delta(
         self, bl_device: BLEDevice, values: SignalKDeltaValues
@@ -437,7 +446,7 @@ async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     while True:
         try:
             scanner = SignalKScanner(devices)
-            logger.debug("Attempting to connect to BLE devices")
+            logger.error("Attempting to connect to BLE devices")
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
