@@ -79,6 +79,7 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
+        logger.error(f"Processing device: ID={id_} MAC={bl_device.address.lower()}")
         transformers: dict[
             type[DeviceData],
             Callable[[BLEDevice, ConfiguredDevice, T, str], SignalKDeltaValues],
@@ -97,12 +98,12 @@ class SignalKScanner(Scanner):
             if isinstance(data, data_type):
                 values = transformer(bl_device, configured_device, data, id_)
                 delta = self.prepare_signalk_delta(bl_device, values)
-                logger.info(delta)
+                logger.error("Generated SignalK delta: %s", json.dumps(delta))
                 print(json.dumps(delta))
                 sys.stdout.flush()
                 return
         else:
-            logger.error("Unknown device", device)
+            logger.error("Unknown device type %s from %s", type(device).__name__, bl_device.address.lower())
 
     def prepare_signalk_delta(
         self, bl_device: BLEDevice, values: SignalKDeltaValues
