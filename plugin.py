@@ -65,7 +65,9 @@ class SignalKScanner(Scanner):
 
     def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
         logger.error(
-            f"Received data from {bl_device.address.lower()}: {raw_data.hex()}"
+            f"Received {len(raw_data)} byte packet from {bl_device.address.lower()} "
+            f"at {datetime.datetime.now().isoformat()}: "
+            f"{raw_data.hex()} (RSSI: {getattr(bl_device, 'rssi', 'N/A')})"
         )
         try:
             device = self.get_device(bl_device, raw_data)
