@@ -53,8 +53,8 @@ class ConfiguredDevice:
 class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
-    def __init__(self, devices: dict[str, ConfiguredDevice], adapter: str = "hci1") -> None:
-        super().__init__(adapter=adapter)
+    def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
+        super().__init__()
         self._devices = devices
 
     def load_key(self, address: str) -> str:
