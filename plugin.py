@@ -53,8 +53,8 @@ class ConfiguredDevice:
 class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
-    def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
-        super().__init__()
+    def __init__(self, devices: dict[str, ConfiguredDevice], adapter: str = "hci0") -> None:
+        super().__init__(adapter=adapter)
         self._devices = devices
 
     def load_key(self, address: str) -> str:
@@ -449,8 +449,8 @@ async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     while True:
         try:
             scanner = SignalKScanner(devices)
-            logger.error("Attempting to connect to BLE devices")
-            await scanner.start()
+            logger.error("Attempting to connect to BLE devices using adapter hci0")
+            await scanner.start(adapter="hci0")
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
             logger.error(f"Scanner failed: {e}", exc_info=True)
