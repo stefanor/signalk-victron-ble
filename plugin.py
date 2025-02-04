@@ -470,9 +470,9 @@ def main() -> None:
         stream=sys.stderr, level=logging.DEBUG if args.verbose else logging.WARNING
     )
 
-    logging.debug("Waiting for config...")
+    logging.error("Waiting for config...")
     config = json.loads(input())
-    logging.info("Configured: %s", json.dumps(config))
+    logging.error("Configured: %s", json.dumps(config))
     devices: dict[str, ConfiguredDevice] = {}
     for device in config["devices"]:
         devices[device["mac"].lower()] = ConfiguredDevice(
@@ -482,7 +482,7 @@ def main() -> None:
             secondary_battery=device.get("secondary_battery"),
         )
 
-    logging.info("Starting Victron BLE plugin")
+    logging.error("Starting Victron BLE plugin")
     asyncio.run(monitor(devices))
 
 
