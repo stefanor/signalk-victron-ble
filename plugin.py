@@ -8,6 +8,7 @@ import sys
 from typing import Any, Callable, TypeVar, Union
 
 from bleak.backends.device import BLEDevice
+from bleak.backends.scanner import AdvertisementData
 from victron_ble.devices import (
     AuxMode,
     BatteryMonitorData,
@@ -53,8 +54,8 @@ class ConfiguredDevice:
 class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
-    def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
-        super().__init__()
+    def __init__(self, devices: dict[str, ConfiguredDevice], adapter: str = "hci1") -> None:
+        super().__init__(backend=adapter)
         self._devices = devices
 
     def load_key(self, address: str) -> str:
@@ -63,14 +64,17 @@ class SignalKScanner(Scanner):
         except KeyError:
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
-    def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
+    def callback(self, bl_device: BLEDevice, advertisement_data: AdvertisementData) -> None:
+        if advertisement_data.rssi is None:
+            return  # Skip packets without RSSI info
+        raw_data = advertisement_data.manufacturer_data.get(0x02E1, b"")  # Victron's manufacturer ID
         logger.error(
             f"Received {len(raw_data)} byte packet from {bl_device.address.lower()} "
             f"at {datetime.datetime.now().isoformat()}: "
-            f"{raw_data.hex()} (RSSI: {getattr(bl_device, 'rssi', 'N/A')})"
+            f"{raw_data.hex()} (RSSI: {advertisement_data.rssi})"
         )
         try:
-            device = self.get_device(bl_device, raw_data)
+            device = self.get_device(bl_device, raw_data) 
         except AdvertisementKeyMissingError:
             return
         except UnknownDeviceError as e:
@@ -448,9 +452,9 @@ class SignalKScanner(Scanner):
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     while True:
         try:
-            scanner = SignalKScanner(devices)
+            scanner = SignalKScanner(devices, adapter="hci1")
             logger.error("Attempting to connect to BLE devices using adapter hci1")
-            await scanner.start(adapter="hci1")
+            await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
             logger.error(f"Scanner failed: {e}", exc_info=True)
