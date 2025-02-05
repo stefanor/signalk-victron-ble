@@ -44,6 +44,6 @@ External dongles (e.g., CSR4.0/Plugable BT4LE) resolve these issues.
 3. **Device Naming**:  
    - Ensure Victron-reported names appear under `electrical.devices.*.deviceName`  
 
-**Tested Hardware**: Raspberry Pi 4 (Bullseye) + Victron Orion XS/SmartShunt + Plugable USB-BT4LE dongle.  
+**Tested Hardware**: Raspberry Pi 4 (Buster) + Victron Orion XS/SmartShunt + Plugable USB-BT4LE dongle.  
 **Requires**: [`bleak>=0.20.0`](https://pypi.org/project/bleak/)  
 
