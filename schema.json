@@ -11,16 +11,6 @@
         "enum_titles": ["Primary (hci0)", "Secondary (hci1)"]
       }
     },
-    "adapter": {
-      "type": "string",
-      "title": "Bluetooth Adapter Interface",
-      "description": "Linux HCI interface (hci0, hci1 etc)",
-      "default": "hci0",
-      "enum": ["hci0", "hci1"],
-      "options": {
-        "enum_titles": ["Primary (hci0)", "Secondary (hci1)"]
-      }
-    },
     "devices": {
       "type": "array",
       "title": "Victron Devices",
