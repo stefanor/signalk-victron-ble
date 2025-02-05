@@ -35,11 +35,6 @@ logger.debug(
     f"victron plugin starting up"
 )
 
-logger.error(
-    f"victron plugin starting up"
-)
-
-
 # 3.9 compatible TypeAliases
 SignalKDelta = dict[str, list[dict[str, Any]]]
 SignalKDeltaValues = list[dict[str, Union[int, float, str, None]]]
@@ -484,7 +479,7 @@ def main() -> None:
         stream=sys.stderr, level=logging.DEBUG if args.verbose else logging.WARNING
     )
 
-    logging.error("Waiting for config...")
+    logging.debug("Waiting for config...")
     config = json.loads(input())
     logging.error("Configured: %s", json.dumps(config))
     devices: dict[str, ConfiguredDevice] = {}
