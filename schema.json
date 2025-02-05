@@ -25,13 +25,8 @@
           "id": {
             "type": "string",
             "title": "Device ID in SignalK",
-            "description": "Used for paths like electrical.devices.[ID].deviceName",
+            "description": "Used to group device metrics under electrical.devices.[ID]",
             "default": "0"
-          },
-          "name": {
-            "type": "string",
-            "title": "Optional Custom Name",
-            "description": "Will override BLE device name if specified"
           },
           "mac": {
             "type": "string",
