@@ -67,17 +67,20 @@ class SignalKScanner(Scanner):
         except KeyError:
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
-    def callback(self, bl_device: BLEDevice, advertisement_data: AdvertisementData) -> None:
-        if advertisement_data.rssi is None:
-            return  # Skip packets without RSSI info
-        raw_data = advertisement_data.manufacturer_data.get(0x02E1, b"")  # Victron's manufacturer ID
+    def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
+        rssi = getattr(bl_device, "rssi", None)
+        if rssi is None:
+            logger.error(f"No RSSI for {bl_device.address.lower()}")
+            return
+        
         logger.error(
             f"Received {len(raw_data)} byte packet from {bl_device.address.lower()} "
             f"at {datetime.datetime.now().isoformat()}: "
-            f"{raw_data.hex()} (RSSI: {advertisement_data.rssi})"
+            f"{raw_data.hex()} (RSSI: {rssi})"
         )
+        
         try:
-            device = self.get_device(bl_device, raw_data) 
+            device = self.get_device(bl_device, raw_data)
         except AdvertisementKeyMissingError:
             return
         except UnknownDeviceError as e:
