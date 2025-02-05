@@ -17,6 +17,6 @@
     "url": "github:stefanor/signalk-victron-ble"
   },
   "scripts": {
-    "preinstall": "/home/pi/.pyenv/versions/3.9.13/bin/python3.9 -m venv ve && ve/bin/python -m pip install wheel && ve/bin/python -m pip install -U -r requirements.txt"
+    "preinstall": "python3 -m venv ve && ve/bin/python -m pip install wheel && ve/bin/python -m pip install -U -r requirements.txt"
   }
 }
