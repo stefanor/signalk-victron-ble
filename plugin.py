@@ -118,6 +118,16 @@ class SignalKScanner(Scanner):
     def prepare_signalk_delta(
         self, bl_device: BLEDevice, values: SignalKDeltaValues
     ) -> SignalKDelta:
+        # Get the configured device for the MAC address
+        configured_device = self._devices[bl_device.address.lower()]
+        id_ = configured_device.id
+        
+        # Add device name to all deltas
+        values.append({
+            "path": f"electrical.devices.{id_}.deviceName",
+            "value": bl_device.name  # Get the device name from BLE advertisement
+        })
+        
         return {
             "updates": [
                 {
@@ -158,6 +168,10 @@ class SignalKScanner(Scanner):
         id_: str,
     ) -> SignalKDeltaValues:
         values: SignalKDeltaValues = [
+            {
+                "path": f"electrical.deviceMetadata.{id_}.name",
+                "value": bl_device.name
+            },
             {
                 "path": f"electrical.batteries.{id_}.voltage",
                 "value": data.get_voltage(),
