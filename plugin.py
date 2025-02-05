@@ -53,11 +53,11 @@ class SignalKScanner(Scanner):
 
     def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
         # Add debug logging for parent class inspection
-        logger.error(f"Parent __init__ signature: {inspect.signature(super().__init__)}")
+        logger.debug(f"Parent __init__ signature: {inspect.signature(super().__init__)}")
         try:
             super().__init__()
         except TypeError as e:
-            logger.error(f"Parent __init__ args required: {e}")
+            logger.debug(f"Parent __init__ args required: {e}")
             raise
         self._devices = devices
 
@@ -70,10 +70,10 @@ class SignalKScanner(Scanner):
     def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
         rssi = getattr(bl_device, "rssi", None)
         if rssi is None:
-            logger.error(f"No RSSI for {bl_device.address.lower()}")
+            logger.debug(f"No RSSI for {bl_device.address.lower()}")
             return
         
-        logger.error(
+        logger.debug(
             f"Received {len(raw_data)} byte packet from {bl_device.address.lower()} "
             f"at {datetime.datetime.now().isoformat()}: "
             f"{raw_data.hex()} (RSSI: {rssi})"
@@ -89,7 +89,7 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
-        logger.error(f"Processing device: ID={id_} MAC={bl_device.address.lower()}")
+        logger.debug(f"Processing device: ID={id_} MAC={bl_device.address.lower()}")
         transformers: dict[
             type[DeviceData],
             Callable[[BLEDevice, ConfiguredDevice, T, str], SignalKDeltaValues],
@@ -108,12 +108,12 @@ class SignalKScanner(Scanner):
             if isinstance(data, data_type):
                 values = transformer(bl_device, configured_device, data, id_)
                 delta = self.prepare_signalk_delta(bl_device, values)
-                logger.error("Generated SignalK delta: %s", json.dumps(delta))
+                logger.debug("Generated SignalK delta: %s", json.dumps(delta))
                 print(json.dumps(delta))
                 sys.stdout.flush()
                 return
         else:
-            logger.error("Unknown device type %s from %s", type(device).__name__, bl_device.address.lower())
+            logger.warn("Unknown device type %s from %s", type(device).__name__, bl_device.address.lower())
 
     def prepare_signalk_delta(
         self, bl_device: BLEDevice, values: SignalKDeltaValues
@@ -460,11 +460,11 @@ async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
     while True:
         try:
             scanner = SignalKScanner(devices)
-            logger.error("Using Bluetooth adapter hci1")
+            logger.debug("Using Bluetooth adapter hci1")
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
-            logger.error(f"Scanner failed: {e}", exc_info=True)
+            logger.debug(f"Scanner failed: {e}", exc_info=True)
             await asyncio.sleep(5)  # Wait before reconnect
             continue
         else:
@@ -484,7 +484,7 @@ def main() -> None:
 
     logging.debug("Waiting for config...")
     config = json.loads(input())
-    logging.error("Configured: %s", json.dumps(config))
+    logging.debug("Configured: %s", json.dumps(config))
     devices: dict[str, ConfiguredDevice] = {}
     for device in config["devices"]:
         devices[device["mac"].lower()] = ConfiguredDevice(
@@ -494,7 +494,7 @@ def main() -> None:
             secondary_battery=device.get("secondary_battery"),
         )
 
-    logging.error("Starting Victron BLE plugin")
+    logging.info("Starting Victron BLE plugin")
     asyncio.run(monitor(devices))
 
 
