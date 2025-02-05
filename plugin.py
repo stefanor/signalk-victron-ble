@@ -25,6 +25,7 @@ from victron_ble.devices import (
 )
 
 T = TypeVar('T', bound=DeviceData)
+import inspect
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -56,7 +57,13 @@ class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
     def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
-        super().__init__()
+        # Add debug logging for parent class inspection
+        logger.error(f"Parent __init__ signature: {inspect.signature(super().__init__)}")
+        try:
+            super().__init__()
+        except TypeError as e:
+            logger.error(f"Parent __init__ args required: {e}")
+            raise
         self._devices = devices
 
     def load_key(self, address: str) -> str:
