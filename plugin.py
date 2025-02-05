@@ -475,12 +475,12 @@ class SignalKScanner(Scanner):
         return values
 
 
-async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
-    os.environ["BLUETOOTH_DEVICE"] = "hci1"
+async def monitor(devices: dict[str, ConfiguredDevice], adapter: str) -> None:
+    os.environ["BLUETOOTH_DEVICE"] = adapter
     while True:
         try:
             scanner = SignalKScanner(devices)
-            logger.debug("Using Bluetooth adapter hci1")
+            logger.debug("Using Bluetooth adapter %s", adapter)
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
@@ -505,6 +505,10 @@ def main() -> None:
     logging.debug("Waiting for config...")
     config = json.loads(input())
     logging.debug("Configured: %s", json.dumps(config))
+    
+    # Get adapter from config with fallback to hci0
+    adapter = config.get("adapter", "hci0")
+    
     devices: dict[str, ConfiguredDevice] = {}
     for device in config["devices"]:
         devices[device["mac"].lower()] = ConfiguredDevice(
@@ -514,8 +518,8 @@ def main() -> None:
             secondary_battery=device.get("secondary_battery"),
         )
 
-    logging.info("Starting Victron BLE plugin")
-    asyncio.run(monitor(devices))
+    logging.info("Starting Victron BLE plugin on adapter %s", adapter)
+    asyncio.run(monitor(devices, adapter))
 
 
 if __name__ == "__main__":

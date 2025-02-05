@@ -69,7 +69,10 @@ module.exports = function (app) {
         }
       })
 
-      child.stdin.write(JSON.stringify(options))
+      child.stdin.write(JSON.stringify({
+        adapter: options.adapter || 'hci0',
+        devices: options.devices
+      }))
       child.stdin.write('\n')
   };
   return {
