@@ -74,9 +74,9 @@ class SignalKScanner(Scanner):
             return
         
         logger.debug(
-            f"Received {len(raw_data)} byte packet from {bl_device.address.lower()} "
-            f"at {datetime.datetime.now().isoformat()}: "
-            f"{raw_data.hex()} (RSSI: {rssi})"
+            f"Received {len(raw_data)}B packet from {bl_device.address.lower()} "
+            f"(RSSI: {rssi}) @ {datetime.datetime.now().isoformat()}: "
+            f"Payload={raw_data.hex()}"
         )
         
         try:
@@ -121,6 +121,12 @@ class SignalKScanner(Scanner):
         # Get the configured device for the MAC address
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
+        
+        # Add device name to all deltas
+        values.append({
+            "path": f"electrical.devices.{id_}.deviceName",
+            "value": bl_device.name
+        })
         
         # Add device name to all deltas
         values.append({
@@ -471,15 +477,18 @@ class SignalKScanner(Scanner):
 
 async def monitor(devices: dict[str, ConfiguredDevice], adapter: str) -> None:
     os.environ["BLUETOOTH_DEVICE"] = adapter
+    logger.info(f"Starting Victron BLE monitor on adapter {adapter}")
+    
     while True:
         try:
             scanner = SignalKScanner(devices)
-            logger.debug("Using Bluetooth adapter %s", adapter)
+            logger.debug(f"Initializing scanner with adapter {adapter}")
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
-            logger.debug(f"Scanner failed: {e}", exc_info=True)
-            await asyncio.sleep(5)  # Wait before reconnect
+            logger.error(f"Scanner failed: {e}", exc_info=True)
+            logger.info(f"Attempting restart in 5 seconds...")
+            await asyncio.sleep(5)
             continue
         else:
             break
