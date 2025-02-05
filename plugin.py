@@ -4,6 +4,7 @@ import datetime
 import dataclasses
 import json
 import logging
+import os
 import sys
 from typing import Any, Callable, TypeVar, Union
 
@@ -54,8 +55,8 @@ class ConfiguredDevice:
 class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
-    def __init__(self, devices: dict[str, ConfiguredDevice], adapter: str = "hci1") -> None:
-        super().__init__(backend=adapter)
+    def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
+        super().__init__()
         self._devices = devices
 
     def load_key(self, address: str) -> str:
@@ -450,10 +451,11 @@ class SignalKScanner(Scanner):
 
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
+    os.environ["BLUETOOTH_DEVICE"] = "hci1"
     while True:
         try:
-            scanner = SignalKScanner(devices, adapter="hci1")
-            logger.error("Attempting to connect to BLE devices using adapter hci1")
+            scanner = SignalKScanner(devices)
+            logger.error("Using Bluetooth adapter hci1")
             await scanner.start()
             await asyncio.Event().wait()
         except (Exception, asyncio.CancelledError) as e:
