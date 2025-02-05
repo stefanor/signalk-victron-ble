@@ -46,6 +46,7 @@ class ConfiguredDevice:
     mac: str
     advertisement_key: str
     secondary_battery: Union[str, None]
+    name: Union[str, None] = None
 
 
 class SignalKScanner(Scanner):
@@ -123,9 +124,14 @@ class SignalKScanner(Scanner):
         id_ = configured_device.id
         
         # Add device name to all deltas
+        device_name = (
+            configured_device.name  # Use custom name if specified
+            if configured_device.name
+            else bl_device.name  # Fallback to BLE name
+        )
         values.append({
             "path": f"electrical.devices.{id_}.deviceName",
-            "value": bl_device.name  # Get the device name from BLE advertisement
+            "value": device_name
         })
         
         return {

@@ -15,11 +15,18 @@
           "id": {
             "type": "string",
             "title": "Device ID in SignalK",
+            "description": "Used for paths like electrical.devices.[ID].deviceName",
             "default": "0"
+          },
+          "name": {
+            "type": "string",
+            "title": "Optional Custom Name",
+            "description": "Will override BLE device name if specified"
           },
           "mac": {
             "type": "string",
             "title": "MAC Address",
+            "pattern": "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}",
             "default": "00:00:00:00:00:00"
           },
           "key": {
