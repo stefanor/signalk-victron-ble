@@ -4,10 +4,12 @@ import datetime
 import dataclasses
 import json
 import logging
+import os
 import sys
-from typing import Any, Callable, Union
+from typing import Any, Callable, TypeVar, Union
 
 from bleak.backends.device import BLEDevice
+from bleak.backends.scanner import AdvertisementData
 from victron_ble.devices import (
     AuxMode,
     BatteryMonitorData,
@@ -21,10 +23,17 @@ from victron_ble.devices import (
     SolarChargerData,
     VEBusData,
 )
+
+T = TypeVar('T', bound=DeviceData)
+import inspect
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
 logger = logging.getLogger("signalk-victron-ble")
+
+logger.debug(
+    f"victron plugin starting up"
+)
 
 # 3.9 compatible TypeAliases
 SignalKDelta = dict[str, list[dict[str, Any]]]
@@ -43,7 +52,13 @@ class SignalKScanner(Scanner):
     _devices: dict[str, ConfiguredDevice]
 
     def __init__(self, devices: dict[str, ConfiguredDevice]) -> None:
-        super().__init__()
+        # Add debug logging for parent class inspection
+        logger.debug(f"Parent __init__ signature: {inspect.signature(super().__init__)}")
+        try:
+            super().__init__()
+        except TypeError as e:
+            logger.debug(f"Parent __init__ args required: {e}")
+            raise
         self._devices = devices
 
     def load_key(self, address: str) -> str:
@@ -53,9 +68,17 @@ class SignalKScanner(Scanner):
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
     def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
+        rssi = getattr(bl_device, "rssi", None)
+        if rssi is None:
+            logger.debug(f"No RSSI for {bl_device.address.lower()}")
+            return
+        
         logger.debug(
-            f"Received data from {bl_device.address.lower()}: {raw_data.hex()}"
+            f"Received {len(raw_data)}B packet from {bl_device.address.lower()} "
+            f"(RSSI: {rssi}) @ {datetime.datetime.now().isoformat()}: "
+            f"Payload={raw_data.hex()}"
         )
+        
         try:
             device = self.get_device(bl_device, raw_data)
         except AdvertisementKeyMissingError:
@@ -66,9 +89,10 @@ class SignalKScanner(Scanner):
         data = device.parse(raw_data)
         configured_device = self._devices[bl_device.address.lower()]
         id_ = configured_device.id
+        logger.debug(f"Processing device: ID={id_} MAC={bl_device.address.lower()}")
         transformers: dict[
             type[DeviceData],
-            Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDeltaValues],
+            Callable[[BLEDevice, ConfiguredDevice, T, str], SignalKDeltaValues],
         ] = {
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
@@ -84,16 +108,32 @@ class SignalKScanner(Scanner):
             if isinstance(data, data_type):
                 values = transformer(bl_device, configured_device, data, id_)
                 delta = self.prepare_signalk_delta(bl_device, values)
-                logger.info(delta)
+                logger.debug("Generated SignalK delta: %s", json.dumps(delta))
                 print(json.dumps(delta))
                 sys.stdout.flush()
                 return
         else:
-            logger.debug("Unknown device", device)
+            logger.warn("Unknown device type %s from %s", type(device).__name__, bl_device.address.lower())
 
     def prepare_signalk_delta(
         self, bl_device: BLEDevice, values: SignalKDeltaValues
     ) -> SignalKDelta:
+        # Get the configured device for the MAC address
+        configured_device = self._devices[bl_device.address.lower()]
+        id_ = configured_device.id
+        
+        # Add device name to all deltas
+        values.append({
+            "path": f"electrical.devices.{id_}.deviceName",
+            "value": bl_device.name
+        })
+        
+        # Add device name to all deltas
+        values.append({
+            "path": f"electrical.devices.{id_}.deviceName",
+            "value": bl_device.name
+        })
+        
         return {
             "updates": [
                 {
@@ -134,6 +174,10 @@ class SignalKScanner(Scanner):
         id_: str,
     ) -> SignalKDeltaValues:
         values: SignalKDeltaValues = [
+            {
+                "path": f"electrical.deviceMetadata.{id_}.name",
+                "value": bl_device.name
+            },
             {
                 "path": f"electrical.batteries.{id_}.voltage",
                 "value": data.get_voltage(),
@@ -431,10 +475,23 @@ class SignalKScanner(Scanner):
         return values
 
 
-async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
-    scanner = SignalKScanner(devices)
-    await scanner.start()
-    await asyncio.Event().wait()
+async def monitor(devices: dict[str, ConfiguredDevice], adapter: str) -> None:
+    os.environ["BLUETOOTH_DEVICE"] = adapter
+    logger.info(f"Starting Victron BLE monitor on adapter {adapter}")
+    
+    while True:
+        try:
+            scanner = SignalKScanner(devices)
+            logger.debug(f"Initializing scanner with adapter {adapter}")
+            await scanner.start()
+            await asyncio.Event().wait()
+        except (Exception, asyncio.CancelledError) as e:
+            logger.error(f"Scanner failed: {e}", exc_info=True)
+            logger.info(f"Attempting restart in 5 seconds...")
+            await asyncio.sleep(5)
+            continue
+        else:
+            break
 
 
 def main() -> None:
@@ -450,7 +507,11 @@ def main() -> None:
 
     logging.debug("Waiting for config...")
     config = json.loads(input())
-    logging.info("Configured: %s", json.dumps(config))
+    logging.debug("Configured: %s", json.dumps(config))
+    
+    # Get adapter from config with fallback to hci0
+    adapter = config.get("adapter", "hci0")
+    
     devices: dict[str, ConfiguredDevice] = {}
     for device in config["devices"]:
         devices[device["mac"].lower()] = ConfiguredDevice(
@@ -460,7 +521,8 @@ def main() -> None:
             secondary_battery=device.get("secondary_battery"),
         )
 
-    asyncio.run(monitor(devices))
+    logging.info("Starting Victron BLE plugin on adapter %s", adapter)
+    asyncio.run(monitor(devices, adapter))
 
 
 if __name__ == "__main__":

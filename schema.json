@@ -1,6 +1,16 @@
 {
-  "type": "object",
+  "type": "object", 
   "properties": {
+    "adapter": {
+      "type": "string",
+      "title": "Bluetooth Adapter Interface",
+      "description": "Linux HCI interface (hci0, hci1 etc)",
+      "default": "hci0",
+      "enum": ["hci0", "hci1"],
+      "options": {
+        "enum_titles": ["Primary (hci0)", "Secondary (hci1)"]
+      }
+    },
     "devices": {
       "type": "array",
       "title": "Victron Devices",
@@ -15,11 +25,13 @@
           "id": {
             "type": "string",
             "title": "Device ID in SignalK",
+            "description": "Used to group device metrics under electrical.devices.[ID]",
             "default": "0"
           },
           "mac": {
             "type": "string",
             "title": "MAC Address",
+            "pattern": "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}",
             "default": "00:00:00:00:00:00"
           },
           "key": {
@@ -30,7 +42,7 @@
           "secondary_battery": {
             "type": "string",
             "title": "Secondary Battery Device ID (if relevant)",
-            "default": "starter"
+            "default": null
           }
         }
       }
