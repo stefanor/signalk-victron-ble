@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import datetime
 import dataclasses
+import enum
 import json
 import logging
 import sys
@@ -37,6 +38,56 @@ class ConfiguredDevice:
     mac: str
     advertisement_key: str
     secondary_battery: Union[str, None]
+
+
+def transformer(
+    prefix: str,
+    data: dict[str, str | float | None],
+) -> SignalKDeltaValues:
+    return [
+        {
+            "path": f"{prefix}.{key}",
+            "value": value,
+        }
+        for key, value in data.items()
+        if value is not None
+    ]
+
+
+def tempK(tempC: float | None) -> float | None:
+    if tempC is None:
+        return None
+    return tempC + 273.15
+
+
+def power(voltage: float | None, current: float | None) -> float | None:
+    if voltage is None or current is None:
+        return None
+    return voltage * current
+
+
+def percentage(percent: float | None) -> float | None:
+    if percent is None:
+        return None
+    return percent / 100
+
+
+def coulomb(ah: float | None) -> float | None:
+    if ah is None:
+        return None
+    return ah * 3600
+
+
+def seconds(minutes: float | None) -> float | None:
+    if minutes is None:
+        return None
+    return minutes * 60
+
+
+def lower_name(value: enum.Enum | None) -> str | None:
+    if value is None:
+        return None
+    return value.name.lower()
 
 
 class SignalKScanner(Scanner):
@@ -115,16 +166,13 @@ class SignalKScanner(Scanner):
         data: BatterySenseData,
         id_: str,
     ) -> SignalKDeltaValues:
-        return [
+        return transformer(
+            f"electrical.batteries.{id_}",
             {
-                "path": f"electrical.batteries.{id_}.voltage",
-                "value": data.get_voltage(),
+                "temperature": tempK(data.get_temperature()),
+                "voltage": data.get_voltage(),
             },
-            {
-                "path": f"electrical.batteries.{id_}.temperature",
-                "value": data.get_temperature() + 273.15,
-            },
-        ]
+        )
 
     def transform_battery_data(
         self,
@@ -133,35 +181,17 @@ class SignalKScanner(Scanner):
         data: BatteryMonitorData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        values = transformer(
+            f"electrical.batteries.{id_}",
             {
-                "path": f"electrical.batteries.{id_}.voltage",
-                "value": data.get_voltage(),
+                "capacity.dischargeSinceFull": coulomb(ah=data.get_consumed_ah()),
+                "capacity.stateOfCharge": percentage(percent=data.get_soc()),
+                "current": data.get_current(),
+                "power": power(voltage=data.get_voltage(), current=data.get_current()),
+                "timeRemaining": seconds(minutes=data.get_remaining_mins()),
+                "voltage": data.get_voltage(),
             },
-            {
-                "path": f"electrical.batteries.{id_}.current",
-                "value": data.get_current(),
-            },
-            {
-                "path": f"electrical.batteries.{id_}.power",
-                "value": data.get_voltage() * data.get_current(),
-            },
-            {
-                "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                "value": data.get_soc() / 100,
-            },
-            {
-                "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
-                "value": data.get_consumed_ah() * 3600,
-            },
-        ]
-        if remaining_mins := data.get_remaining_mins():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
-                    "value": remaining_mins * 60,
-                }
-            )
+        )
 
         if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
             if cfg_device.secondary_battery:
@@ -172,13 +202,10 @@ class SignalKScanner(Scanner):
                     }
                 )
         elif data.get_aux_mode() == AuxMode.TEMPERATURE:
-            if temperature := data.get_temperature():
-                values.append(
-                    {
-                        "path": f"electrical.batteries.{id_}.temperature",
-                        "value": temperature + 273.15,
-                    }
-                )
+            values += transformer(
+                f"electrical.batteries.{id_}",
+                {"temperature": tempK(data.get_temperature())},
+            )
 
         return values
 
@@ -189,32 +216,16 @@ class SignalKScanner(Scanner):
         data: DcDcConverterData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.converters.{id_}",
             {
-                "path": f"electrical.converters.{id_}.chargingMode",
-                "value": data.get_charge_state().name.lower(),
+                "chargerError": lower_name(data.get_charger_error()),
+                "chargerOffReason": lower_name(data.get_off_reason()),
+                "chargingMode": lower_name(data.get_charge_state()),
+                "input.voltage": data.get_input_voltage(),
+                "output.voltage": data.get_output_voltage(),
             },
-            {
-                "path": f"electrical.converters.{id_}.chargerError",
-                "value": data.get_charger_error().name.lower(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.input.voltage",
-                "value": data.get_input_voltage(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.output.voltage",
-                "value": data.get_output_voltage(),
-            },
-        ]
-        if off_reason := data.get_off_reason().name:
-            values.append(
-                {
-                    "path": f"electrical.converters.{id_}.chargerOffReason",
-                    "value": off_reason.lower(),
-                }
-            )
-        return values
+        )
 
     def transform_inverter_data(
         self,
@@ -223,29 +234,16 @@ class SignalKScanner(Scanner):
         data: InverterData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.inverters.{id_}",
             {
-                "path": f"electrical.inverters.{id_}.inverterMode",
-                "value": data.get_device_state().name.lower(),
+                "ac.apparentPower": data.get_ac_apparent_power(),
+                "ac.current": data.get_ac_current(),
+                "ac.lineNeutralVoltage": data.get_ac_voltage(),
+                "dc.voltage": data.get_battery_voltage(),
+                "inverterMode": lower_name(data.get_device_state()),
             },
-            {
-                "path": f"electrical.inverters.{id_}.dc.voltage",
-                "value": data.get_battery_voltage(),
-            },
-            {
-                "path": f"electrical.inverters.{id_}.ac.apparentPower",
-                "value": data.get_ac_apparent_power(),
-            },
-            {
-                "path": f"electrical.inverters.{id_}.ac.lineNeutralVoltage",
-                "value": data.get_ac_voltage(),
-            },
-            {
-                "path": f"electrical.inverters.{id_}.ac.current",
-                "value": data.get_ac_current(),
-            },
-        ]
-        return values
+        )
 
     def transform_lynx_smart_bms_data(
         self,
@@ -254,49 +252,18 @@ class SignalKScanner(Scanner):
         data: LynxSmartBMSData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.batteries.{id_}",
             {
-                "path": f"electrical.batteries.{id_}.voltage",
-                "value": data.get_voltage(),
+                "capacity.dischargeSinceFull": coulomb(ah=data.get_consumed_ah()),
+                "capacity.stateOfCharge": percentage(percent=data.get_soc()),
+                "capacity.timeRemaining": seconds(minutes=data.get_remaining_mins()),
+                "current": data.get_current(),
+                "power": power(voltage=data.get_voltage(), current=data.get_current()),
+                "temperature": tempK(data.get_battery_temperature()),
+                "voltage": data.get_voltage(),
             },
-            {
-                "path": f"electrical.batteries.{id_}.current",
-                "value": data.get_current(),
-            },
-            {
-                "path": f"electrical.batteries.{id_}.power",
-                "value": data.get_voltage() * data.get_current(),
-            },
-        ]
-        if temperature := data.get_battery_temperature():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.temperature",
-                    "value": temperature + 273.15,
-                }
-            )
-        if soc := data.get_soc():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.capacity.stateOfCharge",
-                    "value": soc / 100,
-                }
-            )
-        if consumed_ah := data.get_consumed_ah():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.capacity.dischargeSinceFull",
-                    "value": consumed_ah * 3600,
-                }
-            )
-        if remaining_mins := data.get_remaining_mins():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.capacity.timeRemaining",
-                    "value": remaining_mins * 60,
-                }
-            )
-        return values
+        )
 
     def transform_orion_xs_data(
         self,
@@ -305,40 +272,18 @@ class SignalKScanner(Scanner):
         data: OrionXSData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.converters.{id_}",
             {
-                "path": f"electrical.converters.{id_}.chargingMode",
-                "value": data.get_charge_state().name.lower(),
+                "chargingMode": lower_name(data.get_charge_state()),
+                "chargerError": lower_name(data.get_charger_error()),
+                "chargerOffReason": lower_name(data.get_off_reason()),
+                "input.voltage": data.get_input_voltage(),
+                "input.current": data.get_input_current(),
+                "output.voltage": data.get_output_voltage(),
+                "output.current": data.get_output_current(),
             },
-            {
-                "path": f"electrical.converters.{id_}.chargerError",
-                "value": data.get_charger_error().name.lower(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.input.voltage",
-                "value": data.get_input_voltage(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.input.current",
-                "value": data.get_input_current(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.output.voltage",
-                "value": data.get_output_voltage(),
-            },
-            {
-                "path": f"electrical.converters.{id_}.output.current",
-                "value": data.get_output_current(),
-            },
-        ]
-        if off_reason := data.get_off_reason().name:
-            values.append(
-                {
-                    "path": f"electrical.converters.{id_}.chargerOffReason",
-                    "value": off_reason.lower(),
-                }
-            )
-        return values
+        )
 
     def transform_smart_lithium_data(
         self,
@@ -347,20 +292,13 @@ class SignalKScanner(Scanner):
         data: SmartLithiumData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.batteries.{id_}",
             {
-                "path": f"electrical.batteries.{id_}.voltage",
-                "value": data.get_battery_voltage(),
+                "voltage": data.get_battery_voltage(),
+                "temperature": tempK(data.get_battery_temperature()),
             },
-        ]
-        if temperature := data.get_battery_temperature():
-            values.append(
-                {
-                    "path": f"electrical.batteries.{id_}.temperature",
-                    "value": temperature + 273.15,
-                }
-            )
-        return values
+        )
 
     def transform_solar_charger_data(
         self,
@@ -369,32 +307,17 @@ class SignalKScanner(Scanner):
         data: SolarChargerData,
         id_: str,
     ) -> SignalKDeltaValues:
-        return [
+        return transformer(
+            f"electrical.solar.{id_}",
             {
-                "path": f"electrical.solar.{id_}.voltage",
-                "value": data.get_battery_voltage(),
+                "chargingMode": lower_name(data.get_charge_state()),
+                "current": data.get_battery_charging_current(),
+                "loadCurrent": data.get_external_device_load(),
+                "panelPower": data.get_solar_power(),
+                "voltage": data.get_battery_voltage(),
+                "yieldToday": coulomb(ah=data.get_yield_today()),
             },
-            {
-                "path": f"electrical.solar.{id_}.current",
-                "value": data.get_battery_charging_current(),
-            },
-            {
-                "path": f"electrical.solar.{id_}.chargingMode",
-                "value": data.get_charge_state().name.lower(),
-            },
-            {
-                "path": f"electrical.solar.{id_}.panelPower",
-                "value": data.get_solar_power(),
-            },
-            {
-                "path": f"electrical.solar.{id_}.loadCurrent",
-                "value": data.get_external_device_load(),
-            },
-            {
-                "path": f"electrical.solar.{id_}.yieldToday",
-                "value": data.get_yield_today() * 3600,
-            },
-        ]
+        )
 
     def transform_ve_bus_data(
         self,
@@ -403,32 +326,16 @@ class SignalKScanner(Scanner):
         data: VEBusData,
         id_: str,
     ) -> SignalKDeltaValues:
-        values: SignalKDeltaValues = [
+        return transformer(
+            f"electrical.inverters.{id_}",
             {
-                "path": f"electrical.inverters.{id_}.inverterMode",
-                "value": data.get_device_state().name.lower(),
+                "ac.apparentPower": data.get_ac_out_power(),
+                "dc.current": data.get_battery_current(),
+                "dc.temperature": tempK(data.get_battery_temperature()),
+                "dc.voltage": data.get_battery_voltage(),
+                "inverterMode": lower_name(data.get_device_state()),
             },
-            {
-                "path": f"electrical.inverters.{id_}.dc.voltage",
-                "value": data.get_battery_voltage(),
-            },
-            {
-                "path": f"electrical.inverters.{id_}.dc.current",
-                "value": data.get_battery_current(),
-            },
-            {
-                "path": f"electrical.inverters.{id_}.ac.apparentPower",
-                "value": data.get_ac_out_power(),
-            },
-        ]
-        if temperature := data.get_battery_temperature():
-            values.append(
-                {
-                    "path": f"electrical.inverters.{id_}.dc.temperature",
-                    "value": temperature + 273.15,
-                }
-            )
-        return values
+        )
 
 
 async def monitor(devices: dict[str, ConfiguredDevice]) -> None:
