@@ -10,6 +10,7 @@ from typing import Any, Callable, Union
 
 from bleak.backends.device import BLEDevice
 from victron_ble.devices import (
+    AcChargerData,
     AuxMode,
     BatteryMonitorData,
     BatterySenseData,
@@ -121,6 +122,7 @@ class SignalKScanner(Scanner):
             type[DeviceData],
             Callable[[BLEDevice, ConfiguredDevice, Any, str], SignalKDeltaValues],
         ] = {
+            AcChargerData: self.transform_ac_charger_data,
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
@@ -158,6 +160,44 @@ class SignalKScanner(Scanner):
                 }
             ]
         }
+
+    def transform_ac_charger_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: AcChargerData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        values = transformer(
+            f"electrical.chargers.{id_}_1",
+            {
+                "chargingMode": lower_name(data.get_charge_state()),
+                "current": data.get_output_current1(),
+                "temperature": tempK(data.get_temperature()),
+                "voltage": data.get_output_voltage1(),
+            },
+        )
+        if data.get_output_voltage2() is not None:
+            values += transformer(
+                f"electrical.chargers.{id_}_2",
+                {
+                    "chargingMode": lower_name(data.get_charge_state()),
+                    "current": data.get_output_current2(),
+                    "temperature": tempK(data.get_temperature()),
+                    "voltage": data.get_output_voltage2(),
+                },
+            )
+        if data.get_output_voltage3() is not None:
+            values += transformer(
+                f"electrical.chargers.{id_}_3",
+                {
+                    "chargingMode": lower_name(data.get_charge_state()),
+                    "current": data.get_output_current3(),
+                    "temperature": tempK(data.get_temperature()),
+                    "voltage": data.get_output_voltage3(),
+                },
+            )
+        return values
 
     def transform_battery_sense_data(
         self,
