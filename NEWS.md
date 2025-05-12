@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+* Update to victron_ble 0.9.2
+* Support AC chargers
+
 ## 0.1.3
 
 * Fix a critical syntax error in 0.1.2
