@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+* Restore support for Python 3.9 (#24)
+
 ## 0.1.4
 
 * Update to victron_ble 0.9.2
