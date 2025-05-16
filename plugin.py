@@ -43,7 +43,7 @@ class ConfiguredDevice:
 
 def transformer(
     prefix: str,
-    data: dict[str, str | float | None],
+    data: dict[str, Union[str, float, None]],
 ) -> SignalKDeltaValues:
     return [
         {
@@ -55,37 +55,39 @@ def transformer(
     ]
 
 
-def tempK(tempC: float | None) -> float | None:
+def tempK(tempC: Union[float, None]) -> Union[float, None]:
     if tempC is None:
         return None
     return tempC + 273.15
 
 
-def power(voltage: float | None, current: float | None) -> float | None:
+def power(
+    voltage: Union[float, None], current: Union[float, None]
+) -> Union[float, None]:
     if voltage is None or current is None:
         return None
     return voltage * current
 
 
-def percentage(percent: float | None) -> float | None:
+def percentage(percent: Union[float, None]) -> Union[float, None]:
     if percent is None:
         return None
     return percent / 100
 
 
-def coulomb(ah: float | None) -> float | None:
+def coulomb(ah: Union[float, None]) -> Union[float, None]:
     if ah is None:
         return None
     return ah * 3600
 
 
-def seconds(minutes: float | None) -> float | None:
+def seconds(minutes: Union[float, None]) -> Union[float, None]:
     if minutes is None:
         return None
     return minutes * 60
 
 
-def lower_name(value: enum.Enum | None) -> str | None:
+def lower_name(value: Union[enum.Enum, None]) -> Union[str, None]:
     if value is None:
         return None
     return value.name.lower()
