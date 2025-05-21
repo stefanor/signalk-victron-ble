@@ -15,6 +15,7 @@ from victron_ble.devices import (
     BatteryMonitorData,
     BatterySenseData,
     DcDcConverterData,
+    DcEnergyMeterData,
     DeviceData,
     InverterData,
     LynxSmartBMSData,
@@ -23,6 +24,7 @@ from victron_ble.devices import (
     SolarChargerData,
     VEBusData,
 )
+from victron_ble.devices.dc_energy_meter import MeterType
 from victron_ble.exceptions import AdvertisementKeyMissingError, UnknownDeviceError
 from victron_ble.scanner import Scanner
 
@@ -128,6 +130,7 @@ class SignalKScanner(Scanner):
             BatteryMonitorData: self.transform_battery_data,
             BatterySenseData: self.transform_battery_sense_data,
             DcDcConverterData: self.transform_dcdc_converter_data,
+            DcEnergyMeterData: self.transform_dc_energy_meter_data,
             InverterData: self.transform_inverter_data,
             LynxSmartBMSData: self.transform_lynx_smart_bms_data,
             OrionXSData: self.transform_orion_xs_data,
@@ -268,6 +271,73 @@ class SignalKScanner(Scanner):
                 "output.voltage": data.get_output_voltage(),
             },
         )
+
+    # Typically, a SmartShunt in DC Energy Meter mode
+    def transform_dc_energy_meter_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: DcEnergyMeterData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        # The SmartShunt in DC Energy Meter mode can be configured with various
+        # measurement types, so we use that to determine the best possible path on SignalK
+        prefix = f"electrical.batteries.{id_}"
+        meter_type = data.get_meter_type()
+        if meter_type in {
+            MeterType.GENERIC_LOAD,
+            MeterType.ELECTRIC_DRIVE,
+            MeterType.FRIDGE,
+            MeterType.WATER_PUMP,
+            MeterType.BILGE_PUMP,
+            MeterType.DC_SYSTEM,
+            MeterType.WATER_HEATER,
+        }:
+            # 'dcload' is used by the Victron Venus plugin, it's not standard
+            # in the SignalK spec, but at least we're consistent across plugins
+            prefix = f"electrical.dcload.{id_}"
+        elif meter_type == MeterType.SOLAR_CHARGER:
+            prefix = f"electrical.solar.{id_}"
+        elif meter_type in {
+            MeterType.WIND_CHARGER,
+            MeterType.SHAFT_GENERATOR,
+            MeterType.FUEL_CELL,
+            MeterType.WATER_GENERATOR,
+            MeterType.DC_DC_CHARGER,
+            MeterType.AC_CHARGER,
+            MeterType.GENERIC_SOURCE,
+        }:
+            prefix = f"electrical.chargers.{id_}"
+        elif meter_type == MeterType.ALTERNATOR:
+            prefix = f"electrical.alternators.{id_}"
+        elif meter_type == MeterType.INVERTER:
+            prefix = f"electrical.inverters.{id_}.dc"
+
+        values = transformer(
+            prefix,
+            {
+                "current": data.get_current(),
+                "power": power(voltage=data.get_voltage(), current=data.get_current()),
+                "voltage": data.get_voltage(),
+            },
+        )
+
+        if data.get_aux_mode() == AuxMode.STARTER_VOLTAGE:
+            if cfg_device.secondary_battery:
+                values.append(
+                    {
+                        "path": f"electrical.batteries.{cfg_device.secondary_battery}.voltage",
+                        "value": data.get_starter_voltage(),
+                    }
+                )
+        elif data.get_aux_mode() == AuxMode.TEMPERATURE:
+            values += transformer(
+                f"electrical.batteries.{id_}",
+                {"temperature": tempK(data.get_temperature())},
+            )
+
+        return values
+
 
     def transform_inverter_data(
         self,
