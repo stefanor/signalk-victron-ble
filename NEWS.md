@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+* Support smart shunts in DC energy meter modes (#25)
+
 ## 0.1.5
 
 * Restore support for Python 3.9 (#24)
