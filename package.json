@@ -1,6 +1,6 @@
 {
   "name": "signalk-victron-ble",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Simple Signal K Node server plugin to read data from Victron devices using Instant Data over BLE",
   "main": "index.js",
   "keywords": [

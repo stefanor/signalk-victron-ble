@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+* Restore `capacity.timeRemaining` for battery monitors, accidentally
+  moved in 0.1.4 (#29)
+
 ## 0.1.6
 
 * Support smart shunts in DC energy meter modes (#25)
