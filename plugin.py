@@ -231,9 +231,9 @@ class SignalKScanner(Scanner):
             {
                 "capacity.dischargeSinceFull": coulomb(ah=data.get_consumed_ah()),
                 "capacity.stateOfCharge": percentage(percent=data.get_soc()),
+                "capacity.timeRemaining": seconds(minutes=data.get_remaining_mins()),
                 "current": data.get_current(),
                 "power": power(voltage=data.get_voltage(), current=data.get_current()),
-                "timeRemaining": seconds(minutes=data.get_remaining_mins()),
                 "voltage": data.get_voltage(),
             },
         )
