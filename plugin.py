@@ -83,6 +83,12 @@ def coulomb(ah: Union[float, None]) -> Union[float, None]:
     return ah * 3600
 
 
+def joule(wh: Union[float, None]) -> Union[float, None]:
+    if wh is None:
+        return None
+    return wh * 3600
+
+
 def seconds(minutes: Union[float, None]) -> Union[float, None]:
     if minutes is None:
         return None
@@ -427,7 +433,7 @@ class SignalKScanner(Scanner):
                 "loadCurrent": data.get_external_device_load(),
                 "panelPower": data.get_solar_power(),
                 "voltage": data.get_battery_voltage(),
-                "yieldToday": coulomb(ah=data.get_yield_today()),
+                "yieldToday": joule(ah=data.get_yield_today()),
             },
         )
 
