@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8
+
+* Pin to `victron_ble` 0.9.2. (#35)
+
 ## 0.1.7
 
 * Restore `capacity.timeRemaining` for battery monitors, accidentally
