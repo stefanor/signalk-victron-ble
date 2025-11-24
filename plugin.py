@@ -21,6 +21,7 @@ from victron_ble.devices import (
     InverterData,
     LynxSmartBMSData,
     OrionXSData,
+    MultiRSData,
     SmartLithiumData,
     SolarChargerData,
     VEBusData,
@@ -143,6 +144,7 @@ class SignalKScanner(Scanner):
             InverterData: self.transform_inverter_data,
             LynxSmartBMSData: self.transform_lynx_smart_bms_data,
             OrionXSData: self.transform_orion_xs_data,
+            MultiRSData: self.transform_multi_rs_data,
             SmartLithiumData: self.transform_smart_lithium_data,
             SolarChargerData: self.transform_solar_charger_data,
             VEBusData: self.transform_ve_bus_data,
@@ -382,6 +384,31 @@ class SignalKScanner(Scanner):
                 "power": power(voltage=data.get_voltage(), current=data.get_current()),
                 "temperature": tempK(data.get_battery_temperature()),
                 "voltage": data.get_voltage(),
+            },
+        )
+
+    def transform_multi_rs_data(
+        self,
+        bl_device: BLEDevice,
+        cfg_device: ConfiguredDevice,
+        data: MultiRSData,
+        id_: str,
+    ) -> SignalKDeltaValues:
+        return transformer(
+            f"electrical.inverters.{id_}",
+            {
+                "ac.apparentPower": data.get_active_ac_out_power(),
+                "dc.current": data.get_battery_current(),
+                "dc.voltage": data.get_battery_voltage(),
+                "inverterMode": lower_name(data.get_device_state()),
+            },
+        ) + transformer(
+            f"electrical.solar.{id_}",
+            {
+                "chargingMode": lower_name(data.get_device_state()),
+                "current": data.get_battery_current(),
+                "panelPower": data.get_pv_power(),
+                "yieldToday": joule(wh=data.get_yield_today()),
             },
         )
 

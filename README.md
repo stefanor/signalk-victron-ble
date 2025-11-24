@@ -15,6 +15,7 @@ Currently supported:
 * Inverters (untested).
 * Lynx Smart BMS.
 * MultiPlus inverters (with VE.Bus Bluetooth dongle, untested)
+* MultiPlus RS hybrid inverters (untested).
 * Orion Smart DC/DC chargers/converters.
 * Orion XS DC/DC chargers/converters.
 * Smart Lithum batteries.
