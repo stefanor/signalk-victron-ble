@@ -9,6 +9,7 @@ import sys
 from typing import Any, Callable, Union
 
 from bleak.backends.device import BLEDevice
+from bleak.backends.scanner import AdvertisementData
 from victron_ble.devices import (
     AcChargerData,
     AuxMode,
@@ -114,7 +115,9 @@ class SignalKScanner(Scanner):
         except KeyError:
             raise AdvertisementKeyMissingError(f"No key available for {address}")
 
-    def callback(self, bl_device: BLEDevice, raw_data: bytes) -> None:
+    def callback(
+        self, bl_device: BLEDevice, raw_data: bytes, advertisement: AdvertisementData
+    ) -> None:
         logger.debug(
             f"Received data from {bl_device.address.lower()}: {raw_data.hex()}"
         )
@@ -343,7 +346,6 @@ class SignalKScanner(Scanner):
             )
 
         return values
-
 
     def transform_inverter_data(
         self,
