@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.9
+
+* Add (unstested) support for MultiPlus RS hybrid inverters
+* Fix a typo in `0.1.8`
+
 ## 0.1.8
 
 * Pin to `victron_ble` 0.9.2. (#35)
